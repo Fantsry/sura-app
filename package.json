@@ -5,9 +5,13 @@
     "apps/*"
   ],
   "scripts": {
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d postgres",
     "dev:api": "bun --filter api dev",
     "dev:web": "bun --filter web dev",
     "dev:mobile": "bun --filter mobile start",
-    "db:seed": "bun --filter api db:seed"
+    "db:seed": "bun --filter api db:seed",
+    "setup": "bun install && docker compose up -d postgres && bun --filter api db:seed"
   }
 }

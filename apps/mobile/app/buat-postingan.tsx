@@ -7,7 +7,7 @@ import {
   Switch,
   View,
 } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import MapView, { type Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -15,13 +15,13 @@ import { Colors, Radius, Spacing } from '@/constants/theme';
 import { SuraText } from '@/components/sura/SuraText';
 import { SuraInput } from '@/components/sura/SuraInput';
 import { SuraButton } from '@/components/sura/SuraButton';
-import { api, getCurrentLocation } from '@/src/lib/api';
+import { apiRequest, getCurrentLocation } from '@/src/lib/api';
 
-const CATEGORIES = [
-  { slug: 'bencana', label: 'Bencana Alam', icon: 'warning' as const },
-  { slug: 'pencurian', label: 'Pencurian', icon: 'security' as const },
-  { slug: 'event', label: 'Event', icon: 'event' as const },
-  { slug: 'lainnya', label: 'Lainnya', icon: 'more-horiz' as const },
+const TAGS = [
+  { slug: 'gosip', label: 'Gosip' },
+  { slug: 'diskusi', label: 'Diskusi' },
+  { slug: 'konspirasi', label: 'Konspirasi' },
+  { slug: 'rekomendasi', label: 'Rekomendasi' },
 ];
 
 const DEFAULT_REGION: Region = {
@@ -48,38 +48,44 @@ async function reverseLookup(lat: number, lng: number) {
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 }
 
-export default function LaporScreen() {
+export default function BuatPostinganScreen() {
   const mapRef = useRef<MapView>(null);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [categorySlug, setCategorySlug] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [content, setContent] = useState('');
+  const [tag, setTag] = useState('diskusi');
+  const [includeLocation, setIncludeLocation] = useState(false);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [address, setAddress] = useState('');
   const [locLoading, setLocLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>(
+    []
+  );
 
-  const setPoint = async (lat: number, lng: number, addr?: string) => {
-    setLatitude(lat);
-    setLongitude(lng);
-    setAddress(addr ?? (await reverseLookup(lat, lng)));
-    mapRef.current?.animateToRegion(
-      {
-        latitude: lat,
-        longitude: lng,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
-      },
-      500
-    );
-  };
+  useEffect(() => {
+    apiRequest<Array<{ id: string; name: string }>>('/forum/categories')
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
 
   const useCurrentLocation = async () => {
     setLocLoading(true);
     try {
       const loc = await getCurrentLocation();
-      await setPoint(loc.latitude, loc.longitude, loc.address);
+      setLatitude(loc.latitude);
+      setLongitude(loc.longitude);
+      setAddress(loc.address ?? '');
+      setIncludeLocation(true);
+      mapRef.current?.animateToRegion(
+        {
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        },
+        500
+      );
     } catch (e) {
       Alert.alert(
         'Lokasi',
@@ -90,33 +96,37 @@ export default function LaporScreen() {
     }
   };
 
-  useEffect(() => {
-    useCurrentLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const handleSubmit = async () => {
-    if (!latitude || !longitude) {
-      Alert.alert('Lokasi', 'Lokasi wajib. Ketuk tombol GPS atau pilih titik di peta.');
+    if (title.length < 5) {
+      Alert.alert('Form', 'Judul minimal 5 karakter');
       return;
     }
-    if (!categorySlug || !title || !description) {
-      Alert.alert('Form belum lengkap', 'Lengkapi kategori, judul, dan deskripsi.');
+    if (content.length < 10) {
+      Alert.alert('Form', 'Konten minimal 10 karakter');
       return;
     }
     setSubmitting(true);
     try {
-      await api.createReport({
-        title,
-        description,
-        categorySlug,
-        latitude,
-        longitude,
-        address,
-        isAnonymous,
+      const matched = categories.find((c) =>
+        c.name.toLowerCase().includes(tag.toLowerCase())
+      );
+      const tags: string[] = [tag];
+      let finalContent = content;
+      if (includeLocation && latitude && longitude) {
+        tags.push(`loc:${latitude.toFixed(5)},${longitude.toFixed(5)}`);
+        finalContent = `${content}\n\n📍 Lokasi: ${address || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`}`;
+      }
+      await apiRequest('/forum/posts', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          content: finalContent,
+          categoryId: matched?.id ?? categories[0]?.id,
+          tags,
+        }),
       });
-      Alert.alert('Berhasil', 'Laporan Anda telah dikirim', [
-        { text: 'OK', onPress: () => router.push('/(tabs)/laporanku') },
+      Alert.alert('Berhasil', 'Postingan berhasil dipublikasikan', [
+        { text: 'OK', onPress: () => router.replace('/(tabs)/komunitas') },
       ]);
     } catch (e) {
       Alert.alert('Gagal', e instanceof Error ? e.message : 'Tidak dapat mengirim');
@@ -139,29 +149,28 @@ export default function LaporScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerCard}>
         <SuraText variant="h2" color={Colors.primary}>
-          Suarakan Aspirasimu
+          Bagikan ke Komunitas
         </SuraText>
         <SuraText
           variant="bodyMd"
           color={Colors.onSurfaceVariant}
           style={{ marginTop: 4 }}
         >
-          Lokasi otomatis dari GPS, atau geser/ketuk peta untuk memilih titik.
+          Postingan langsung tayang. Untuk laporan resmi, gunakan Buat Laporan.
         </SuraText>
       </View>
 
-      {/* Category chips */}
       <View style={styles.section}>
         <SuraText variant="labelBold" style={styles.sectionLabel}>
-          KATEGORI
+          PILIH KATEGORI
         </SuraText>
         <View style={styles.chips}>
-          {CATEGORIES.map((c) => {
-            const active = categorySlug === c.slug;
+          {TAGS.map((t) => {
+            const active = tag === t.slug;
             return (
               <Pressable
-                key={c.slug}
-                onPress={() => setCategorySlug(c.slug)}
+                key={t.slug}
+                onPress={() => setTag(t.slug)}
                 style={[
                   styles.chip,
                   active && {
@@ -171,16 +180,11 @@ export default function LaporScreen() {
                   },
                 ]}
               >
-                <MaterialIcons
-                  name={c.icon}
-                  size={16}
-                  color={active ? Colors.primary : Colors.onSurfaceVariant}
-                />
                 <SuraText
                   variant="button"
                   color={active ? Colors.primary : Colors.onSurface}
                 >
-                  {c.label}
+                  {t.label}
                 </SuraText>
               </Pressable>
             );
@@ -190,26 +194,25 @@ export default function LaporScreen() {
 
       <View style={styles.card}>
         <SuraInput
-          label="Judul Laporan"
+          label="Judul Postingan"
           value={title}
           onChangeText={setTitle}
-          placeholder="Contoh: Pohon tumbang menutup jalan"
+          placeholder="Apa yang ingin Anda diskusikan?"
         />
         <SuraInput
-          label="Deskripsi"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Jelaskan detail kejadian..."
+          label="Konten"
+          value={content}
+          onChangeText={setContent}
+          placeholder="Ceritakan, beri info, atau mulai diskusi..."
           multiline
-          style={{ height: 100, textAlignVertical: 'top', paddingTop: 12 }}
+          style={{ height: 140, textAlignVertical: 'top', paddingTop: 12 }}
         />
       </View>
 
-      {/* Map picker */}
       <View style={styles.section}>
         <View style={styles.locHeader}>
           <SuraText variant="labelBold" style={styles.sectionLabel}>
-            LOKASI SAAT INI
+            LOKASI (OPSIONAL)
           </SuraText>
           <Pressable onPress={useCurrentLocation} style={styles.gpsLink}>
             <MaterialIcons
@@ -218,75 +221,63 @@ export default function LaporScreen() {
               color={Colors.primary}
             />
             <SuraText variant="button" color={Colors.primary}>
-              {locLoading ? 'Mengambil...' : 'Gunakan GPS'}
+              {locLoading ? 'Mengambil...' : 'Lokasi saya'}
             </SuraText>
           </Pressable>
         </View>
 
-        <View style={styles.mapBox}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            initialRegion={region}
-            onRegionChangeComplete={(r) => {
-              setLatitude(r.latitude);
-              setLongitude(r.longitude);
-            }}
-            onPress={(e) => {
-              const { latitude: lat, longitude: lng } = e.nativeEvent.coordinate;
-              setPoint(lat, lng);
-            }}
+        <View style={styles.toggleRow}>
+          <SuraText variant="bodyMd">Sertakan lokasi pada postingan</SuraText>
+          <Switch
+            value={includeLocation}
+            onValueChange={setIncludeLocation}
+            trackColor={{ true: Colors.primary, false: Colors.outlineVariant }}
           />
-          {/* Center pin overlay so it stays anchored as user pans */}
-          <View pointerEvents="none" style={styles.pinOverlay}>
-            <MaterialIcons name="location-pin" size={44} color={Colors.error} />
-          </View>
-          <Pressable
-            onPress={async () => {
-              if (latitude && longitude) {
-                setAddress('Memuat alamat...');
-                const a = await reverseLookup(latitude, longitude);
-                setAddress(a);
-              }
-            }}
-            style={styles.refreshAddr}
-          >
-            <MaterialIcons name="refresh" size={18} color={Colors.primary} />
-          </Pressable>
         </View>
 
-        <View style={styles.addrBar}>
-          <MaterialIcons name="location-on" size={18} color={Colors.error} />
-          <SuraText
-            variant="bodySm"
-            numberOfLines={2}
-            style={{ flex: 1 }}
-            color={Colors.onSurface}
-          >
-            {address || 'Geser peta atau gunakan GPS untuk menentukan lokasi'}
-          </SuraText>
-        </View>
-        <SuraText variant="bodySm" color={Colors.outline} style={{ marginTop: 4 }}>
-          Tips: pin di tengah mengikuti pergerakan peta. Ketuk peta untuk pindah ke titik tersebut.
-        </SuraText>
-      </View>
-
-      <View style={styles.anonRow}>
-        <View>
-          <SuraText variant="bodyMd">Laporkan secara anonim</SuraText>
-          <SuraText variant="bodySm" color={Colors.outline}>
-            Nama Anda tidak ditampilkan publik
-          </SuraText>
-        </View>
-        <Switch
-          value={isAnonymous}
-          onValueChange={setIsAnonymous}
-          trackColor={{ true: Colors.primary, false: Colors.outlineVariant }}
-        />
+        {includeLocation && (
+          <>
+            <View style={styles.mapBox}>
+              <MapView
+                ref={mapRef}
+                style={styles.map}
+                initialRegion={region}
+                onPress={async (e) => {
+                  const { latitude: lat, longitude: lng } =
+                    e.nativeEvent.coordinate;
+                  setLatitude(lat);
+                  setLongitude(lng);
+                  setAddress(await reverseLookup(lat, lng));
+                }}
+                onRegionChangeComplete={(r) => {
+                  setLatitude(r.latitude);
+                  setLongitude(r.longitude);
+                }}
+              />
+              <View pointerEvents="none" style={styles.pinOverlay}>
+                <MaterialIcons
+                  name="location-pin"
+                  size={44}
+                  color={Colors.error}
+                />
+              </View>
+            </View>
+            <View style={styles.addrBar}>
+              <MaterialIcons
+                name="location-on"
+                size={18}
+                color={Colors.error}
+              />
+              <SuraText variant="bodySm" numberOfLines={2} style={{ flex: 1 }}>
+                {address || 'Geser peta untuk memilih titik'}
+              </SuraText>
+            </View>
+          </>
+        )}
       </View>
 
       <SuraButton
-        title="Kirim Aduan"
+        title="Publikasikan"
         onPress={handleSubmit}
         loading={submitting}
         style={{ marginHorizontal: Spacing.gutter, marginTop: Spacing.md }}
@@ -325,10 +316,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: Radius.full,
     borderWidth: 1,
@@ -339,12 +327,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
   },
   gpsLink: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surfaceContainerLowest,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   mapBox: {
     height: 220,
@@ -361,40 +359,14 @@ const styles = StyleSheet.create({
     marginLeft: -22,
     marginTop: -44,
   },
-  refreshAddr: {
-    position: 'absolute',
-    bottom: Spacing.sm,
-    right: Spacing.sm,
-    backgroundColor: Colors.surfaceContainerLowest,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-  },
   addrBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-  },
-  anonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: Spacing.gutter,
-    marginTop: Spacing.md,
     padding: Spacing.md,
     backgroundColor: Colors.surfaceContainerLowest,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
   },

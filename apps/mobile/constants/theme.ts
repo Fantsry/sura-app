@@ -1,4 +1,4 @@
-/** Design tokens — selaras dengan web (Material 3 / Tailwind Sura) */
+/** Design tokens — mirrors web Tailwind/Material 3 Sura palette. */
 export const Colors = {
   background: '#fbf8ff',
   surface: '#fbf8ff',
@@ -14,11 +14,16 @@ export const Colors = {
   primaryContainer: '#1e40af',
   onPrimaryContainer: '#a8b8ff',
   primaryFixed: '#dde1ff',
+  primaryFixedDim: '#b8c4ff',
+  onPrimaryFixed: '#001453',
   secondary: '#505f76',
   onSecondary: '#ffffff',
   secondaryContainer: '#d0e1fb',
   onSecondaryContainer: '#54647a',
+  secondaryFixed: '#d3e4fe',
   tertiary: '#303539',
+  tertiaryFixed: '#dfe3e7',
+  onTertiaryFixed: '#171c1f',
   error: '#ba1a1a',
   onError: '#ffffff',
   errorContainer: '#ffdad6',
@@ -26,6 +31,8 @@ export const Colors = {
   outline: '#757684',
   outlineVariant: '#c4c5d5',
   inversePrimary: '#b8c4ff',
+  inverseSurface: '#2f3037',
+  success: '#1a8b4a',
 } as const;
 
 export const Spacing = {
@@ -34,6 +41,7 @@ export const Spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 48,
   gutter: 16,
 } as const;
 
@@ -54,4 +62,13 @@ export const Radius = {
   lg: 16,
   xl: 20,
   full: 999,
+};
+
+/** Map status -> { label, color } for badges (matches web). */
+export const StatusMeta: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: 'Menunggu', color: Colors.error, bg: Colors.errorContainer },
+  verified: { label: 'Terverifikasi', color: Colors.primary, bg: Colors.primaryFixed },
+  in_progress: { label: 'Diproses', color: Colors.primary, bg: Colors.primaryFixed },
+  resolved: { label: 'Selesai', color: Colors.success, bg: '#d4f5e1' },
+  rejected: { label: 'Ditolak', color: Colors.error, bg: Colors.errorContainer },
 };

@@ -42,6 +42,7 @@ export default function RootLayout() {
         <Stack.Screen name="report/[id]" options={{ title: 'Detail Laporan' }} />
         <Stack.Screen name="berita" options={{ title: 'Portal Berita' }} />
         <Stack.Screen name="statistik" options={{ title: 'Statistik Publik' }} />
+        <Stack.Screen name="buat-postingan" options={{ title: 'Postingan Baru' }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
     </AuthProvider>

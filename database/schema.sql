@@ -81,7 +81,7 @@ CREATE TABLE reports (
     province VARCHAR(100),
     
     -- Media attachments
-    image_urls TEXT[], -- Array of image URLs
+    image_urls JSONB DEFAULT '[]'::jsonb, -- Array of image URLs
     video_url TEXT,
     
     -- Metadata
@@ -159,7 +159,7 @@ CREATE TABLE news_articles (
     is_published BOOLEAN DEFAULT FALSE,
     is_featured BOOLEAN DEFAULT FALSE,
     view_count INTEGER DEFAULT 0,
-    tags TEXT[], -- Array of tags
+    tags JSONB DEFAULT '[]'::jsonb, -- Array of tags
     published_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -193,7 +193,7 @@ CREATE TABLE forum_posts (
     view_count INTEGER DEFAULT 0,
     like_count INTEGER DEFAULT 0,
     comment_count INTEGER DEFAULT 0,
-    tags TEXT[],
+    tags JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

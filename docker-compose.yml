@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sura-postgres
+    environment:
+      POSTGRES_DB: sura_db
+      POSTGRES_USER: sura_user
+      POSTGRES_PASSWORD: your_secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - sura_pg_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sura_user -d sura_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  sura_pg_data:
