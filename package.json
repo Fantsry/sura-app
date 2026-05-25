@@ -1,0 +1,13 @@
+{
+  "name": "beringin-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "bun --filter api dev",
+    "dev:web": "bun --filter web dev",
+    "dev:mobile": "bun --filter mobile start",
+    "db:seed": "bun --filter api db:seed"
+  }
+}
