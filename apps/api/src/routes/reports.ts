@@ -37,6 +37,9 @@ const categorySlugMap: Record<string, string> = {
   pencurian: 'Keamanan',
   event: 'Sosial',
   lainnya: 'Sosial',
+  infrastruktur: 'Infrastruktur',
+  keamanan: 'Keamanan',
+  lingkungan: 'Lingkungan',
 };
 
 async function resolveCategoryId(
@@ -469,5 +472,24 @@ reportsRoute.post(
     );
   }
 );
+
+reportsRoute.post('/:id/like', requireAuth, async (c) => {
+  const id = c.req.param('id');
+  const [report] = await db
+    .select({ id: reports.id })
+    .from(reports)
+    .where(eq(reports.id, id))
+    .limit(1);
+
+  if (!report) return c.json({ error: 'Laporan tidak ditemukan' }, 404);
+
+  const [updated] = await db
+    .update(reports)
+    .set({ likeCount: sql`${reports.likeCount} + 1` })
+    .where(eq(reports.id, id))
+    .returning();
+
+  return c.json({ likeCount: updated.likeCount });
+});
 
 export default reportsRoute;

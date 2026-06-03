@@ -74,6 +74,45 @@
   --spacing-max-width: 1280px;
 }
 
+@custom-variant dark (&:is(.dark *));
+
+:root.dark {
+  --color-background: #121318;
+  --color-surface: #121318;
+  --color-surface-container-lowest: #0d0e13;
+  --color-surface-container-low: #1a1b22;
+  --color-surface-container: #1e1f26;
+  --color-surface-container-high: #292a31;
+  --color-surface-container-highest: #34343b;
+  --color-surface-variant: #444653;
+  --color-surface-dim: #121318;
+  --color-surface-bright: #383940;
+  --color-surface-tint: #b8c4ff;
+  
+  --color-on-surface: #e3e1eb;
+  --color-on-surface-variant: #c4c5d5;
+  --color-on-background: #e3e1eb;
+
+  --color-primary: #b8c4ff;
+  --color-on-primary: #001453;
+  --color-primary-container: #173bab;
+  --color-on-primary-container: #dde1ff;
+  
+  --color-outline: #8e909f;
+  --color-outline-variant: #444653;
+
+  --color-inverse-surface: #e3e1eb;
+  --color-inverse-on-surface: #2f3037;
+}
+
+/* Fix for Tailwind v4 sizing conflicts where max-w-md becomes 16px */
+.max-w-xs { max-width: 20rem !important; }
+.max-w-sm { max-width: 24rem !important; }
+.max-w-md { max-width: 28rem !important; }
+.max-w-lg { max-width: 32rem !important; }
+.max-w-xl { max-width: 36rem !important; }
+.max-w-screen-xl { max-width: 1280px !important; }
+
 /* =====================================================
    Base styles
    ===================================================== */
@@ -136,3 +175,28 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
 }
+
+/* =====================================================
+   Typography Design System
+   ===================================================== */
+.font-h1 { font-family: 'Inter', sans-serif; font-weight: 800; }
+.text-h1 { font-size: 32px; line-height: 40px; letter-spacing: -0.02em; }
+.font-h2 { font-family: 'Inter', sans-serif; font-weight: 700; }
+.text-h2 { font-size: 24px; line-height: 32px; letter-spacing: -0.01em; }
+.font-h3 { font-family: 'Inter', sans-serif; font-weight: 600; }
+.text-h3 { font-size: 20px; line-height: 28px; }
+
+.font-body-lg { font-family: 'Inter', sans-serif; font-weight: 400; }
+.text-body-lg { font-size: 16px; line-height: 24px; }
+.font-body-md { font-family: 'Inter', sans-serif; font-weight: 400; }
+.text-body-md { font-size: 14px; line-height: 20px; }
+.font-body-sm { font-family: 'Inter', sans-serif; font-weight: 400; }
+.text-body-sm { font-size: 12px; line-height: 16px; }
+.font-body-xs { font-family: 'Inter', sans-serif; font-weight: 400; }
+.text-body-xs { font-size: 10px; line-height: 14px; }
+
+.font-label-bold { font-family: 'Inter', sans-serif; font-weight: 700; }
+.text-label-bold { font-size: 12px; line-height: 16px; letter-spacing: 0.05em; }
+
+.font-button { font-family: 'Inter', sans-serif; font-weight: 600; }
+.text-button { font-size: 14px; line-height: 20px; }

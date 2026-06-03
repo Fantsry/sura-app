@@ -79,7 +79,7 @@ const StatistikPublik: React.FC = () => {
     : [-6.2, 106.816666];
 
   return (
-    <React.Fragment>
+    <div className="bg-background text-on-surface min-h-screen">
       <Navigation />
       <main className="pt-20 md:pl-64 pb-xl px-gutter min-h-screen">
         <div className="max-w-max-width mx-auto">
@@ -330,7 +330,7 @@ const StatistikPublik: React.FC = () => {
           ) : null}
         </div>
       </main>
-    </React.Fragment>
+    </div>
   );
 };
 

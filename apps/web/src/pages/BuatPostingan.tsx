@@ -68,7 +68,7 @@ const BuatPostingan: React.FC = () => {
       .catch(() => {});
   }, [navigate]);
 
-  const useCurrentLocation = async () => {
+  const handleGetCurrentLocation = async () => {
     setLocLoading(true);
     try {
       const loc = await getCurrentLocation();
@@ -221,7 +221,7 @@ const BuatPostingan: React.FC = () => {
                   </label>
                   <button
                     type="button"
-                    onClick={useCurrentLocation}
+                    onClick={handleGetCurrentLocation}
                     disabled={locLoading}
                     className="text-primary font-button text-body-sm flex items-center gap-xs hover:underline disabled:opacity-60"
                   >

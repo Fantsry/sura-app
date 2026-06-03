@@ -82,6 +82,17 @@ export type ForumPost = {
   category: { id: string; name: string; color: string } | null;
 };
 
+export type Notification = {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: string;
+  relatedId: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 function getToken(): string | null {
   return localStorage.getItem('auth_token');
 }
@@ -205,6 +216,11 @@ export const api = {
       body: JSON.stringify({ content, parentId }),
     }),
 
+  likeReport: (id: string) =>
+    apiRequest<{ likeCount: number }>(`/reports/${id}/like`, {
+      method: 'POST',
+    }),
+
   createReport: (data: {
     title: string;
     description: string;
@@ -215,6 +231,7 @@ export const api = {
     address?: string;
     imageUrls?: string[];
     isAnonymous?: boolean;
+    priority?: string;
   }) =>
     apiRequest<Report>('/reports', {
       method: 'POST',
@@ -259,8 +276,12 @@ export const api = {
     apiRequest<{ likeCount: number }>(`/forum/posts/${id}/like`, {
       method: 'POST',
     }),
+  deleteForumPost: (id: string) =>
+    apiRequest<{ message: string }>(`/forum/posts/${id}`, {
+      method: 'DELETE',
+    }),
   createForumComment: (id: string, content: string, parentId?: string) =>
-    apiRequest<any>(`/forum/posts/${id}/comments`, {
+    apiRequest<unknown>(`/forum/posts/${id}/comments`, {
       method: 'POST',
       body: JSON.stringify({ content, parentId }),
     }),
@@ -303,6 +324,20 @@ export const api = {
         monthly: unknown;
       }>('/admin/statistics'),
   },
+
+  // Notifications
+  getNotifications: (limit = 50) =>
+    apiRequest<{ notifications: Notification[]; unreadCount: number }>(
+      `/notifications?limit=${limit}`
+    ),
+  markNotificationRead: (id: string) =>
+    apiRequest<{ message: string }>(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    }),
+  markAllNotificationsRead: () =>
+    apiRequest<{ message: string }>('/notifications/read-all', {
+      method: 'POST',
+    }),
 };
 
 export const STATUS_META: Record<

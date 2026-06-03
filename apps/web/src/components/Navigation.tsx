@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { clearAuth, getStoredUser } from '../lib/api';
+import { api, clearAuth, formatRelative, getStoredUser, type Notification } from '../lib/api';
 
 interface User {
   id: string;
@@ -18,10 +18,39 @@ interface NavItem {
 }
 
 const Navigation: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const stored = getStoredUser();
+    if (stored) {
+      return {
+        id: stored.id,
+        name: stored.fullName,
+        role: stored.role === 'admin' || stored.role === 'moderator' ? 'admin' : 'user',
+        avatar: stored.avatarUrl ?? undefined,
+      };
+    }
+    return null;
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const loadNotifications = useCallback(() => {
+    if (!getStoredUser()) return;
+    api.getNotifications(20)
+      .then((data) => {
+        setNotifications(data.notifications);
+        setUnreadCount(data.unreadCount);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications, location.pathname]);
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -62,7 +91,7 @@ const Navigation: React.FC = () => {
     if (href === '/') {
       return location.pathname === '/';
     }
-    return location.pathname.startsWith(href);
+    return location.pathname === href || location.pathname.startsWith(`${href}/`);
   };
 
   const handleLogout = () => {
@@ -71,6 +100,39 @@ const Navigation: React.FC = () => {
     setIsMobileMenuOpen(false);
     navigate('/masuk');
   };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch {}
+  };
+
+  const handleNotifClick = async (n: Notification) => {
+    if (!n.isRead) {
+      try {
+        await api.markNotificationRead(n.id);
+        setNotifications((prev) =>
+          prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x))
+        );
+        setUnreadCount((c) => Math.max(0, c - 1));
+      } catch {}
+    }
+    setNotifOpen(false);
+    if (n.relatedId) navigate(`/detail?id=${n.relatedId}`);
+  };
+
+  // Close notif dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   if (!user) {
     return (
@@ -113,10 +175,59 @@ const Navigation: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-md">
-          <button className="relative material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded-full">
-            notifications
-            <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
-          </button>
+          <div className="relative" ref={notifRef}>
+            <button
+              type="button"
+              onClick={() => setNotifOpen((v) => !v)}
+              className="relative material-symbols-outlined p-2 text-on-surface-variant hover:bg-surface-container-highest transition-colors rounded-full"
+            >
+              notifications
+              {unreadCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] bg-error text-on-error rounded-full text-[10px] font-bold flex items-center justify-center px-xs">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant overflow-hidden z-50">
+                <div className="p-md border-b border-outline-variant flex items-center justify-between">
+                  <h4 className="font-h3 text-h3 text-on-surface">Notifikasi</h4>
+                  {unreadCount > 0 && (
+                    <button type="button" onClick={handleMarkAllRead} className="text-primary font-button text-body-sm hover:underline">
+                      Tandai semua dibaca
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="p-lg text-center text-on-surface-variant text-body-sm">Tidak ada notifikasi.</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => handleNotifClick(n)}
+                        className={`w-full text-left p-md border-b border-outline-variant/20 hover:bg-surface-container transition-colors flex gap-sm ${
+                          n.isRead ? 'opacity-60' : ''
+                        }`}
+                      >
+                        <span className={`material-symbols-outlined text-[20px] mt-xs flex-shrink-0 ${n.isRead ? 'text-outline' : 'text-primary'}`}>
+                          {n.type === 'report_update' ? 'assignment' : 'notifications'}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-body-sm line-clamp-1 ${n.isRead ? 'text-on-surface-variant' : 'text-on-surface font-semibold'}`}>{n.title}</p>
+                          <p className="text-body-sm text-on-surface-variant line-clamp-2">{n.message}</p>
+                          <p className="text-[10px] text-outline mt-xs">{formatRelative(n.createdAt)}</p>
+                        </div>
+                        {!n.isRead && <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"></span>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           
           <div className="flex items-center gap-sm">
             <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center overflow-hidden">
@@ -183,10 +294,59 @@ const Navigation: React.FC = () => {
           <span className="font-h2 text-h2 font-bold text-primary dark:text-inverse-primary">Sura</span>
         </div>
         <div className="flex items-center gap-md">
-          <button className="relative material-symbols-outlined p-2 text-on-surface-variant">
-            notifications
-            <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
-          </button>
+          <div className="relative" ref={notifRef}>
+            <button
+              type="button"
+              onClick={() => setNotifOpen((v) => !v)}
+              className="relative material-symbols-outlined p-2 text-on-surface-variant"
+            >
+              notifications
+              {unreadCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] bg-error text-on-error rounded-full text-[10px] font-bold flex items-center justify-center px-xs">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant overflow-hidden z-50">
+                <div className="p-md border-b border-outline-variant flex items-center justify-between">
+                  <h4 className="font-h3 text-h3 text-on-surface">Notifikasi</h4>
+                  {unreadCount > 0 && (
+                    <button type="button" onClick={handleMarkAllRead} className="text-primary font-button text-body-sm hover:underline">
+                      Tandai semua dibaca
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="p-lg text-center text-on-surface-variant text-body-sm">Tidak ada notifikasi.</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => handleNotifClick(n)}
+                        className={`w-full text-left p-md border-b border-outline-variant/20 hover:bg-surface-container transition-colors flex gap-sm ${
+                          n.isRead ? 'opacity-60' : ''
+                        }`}
+                      >
+                        <span className={`material-symbols-outlined text-[20px] mt-xs flex-shrink-0 ${n.isRead ? 'text-outline' : 'text-primary'}`}>
+                          {n.type === 'report_update' ? 'assignment' : 'notifications'}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-body-sm line-clamp-1 ${n.isRead ? 'text-on-surface-variant' : 'text-on-surface font-semibold'}`}>{n.title}</p>
+                          <p className="text-body-sm text-on-surface-variant line-clamp-2">{n.message}</p>
+                          <p className="text-[10px] text-outline mt-xs">{formatRelative(n.createdAt)}</p>
+                        </div>
+                        {!n.isRead && <span className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5"></span>}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="material-symbols-outlined p-2 text-on-surface-variant"
@@ -219,7 +379,7 @@ const Navigation: React.FC = () => {
         <nav className="flex-1 space-y-1">
           {/* User Menu Section */}
           {user.role === 'admin' && (
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col gap-1">
               <div className="px-md py-xs">
                 <p className="font-label-bold text-label-bold text-on-surface-variant text-xs uppercase tracking-wider">User Menu</p>
               </div>
@@ -228,8 +388,8 @@ const Navigation: React.FC = () => {
                   key={item.href}
                   className={`flex items-center gap-md py-3 px-md rounded-lg mx-md transition-all ${
                     isActive(item.href) 
-                      ? 'bg-secondary-container dark:bg-secondary-fixed-dim text-on-secondary-container dark:text-on-secondary-fixed-variant' 
-                      : 'text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high'
+                      ? 'bg-primary dark:bg-primary text-on-primary dark:text-on-primary shadow-md' 
+                      : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
                   }`}
                   to={item.href}
                 >
@@ -247,7 +407,7 @@ const Navigation: React.FC = () => {
 
           {/* Admin Menu Section */}
           {user.role === 'admin' && (
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col gap-1">
               <div className="px-md py-xs">
                 <p className="font-label-bold text-label-bold text-on-surface-variant text-xs uppercase tracking-wider">Admin Menu</p>
               </div>
@@ -256,8 +416,8 @@ const Navigation: React.FC = () => {
                   key={item.href}
                   className={`flex items-center gap-md py-3 px-md rounded-lg mx-md transition-all ${
                     isActive(item.href) 
-                      ? 'bg-secondary-container dark:bg-secondary-fixed-dim text-on-secondary-container dark:text-on-secondary-fixed-variant' 
-                      : 'text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high'
+                      ? 'bg-primary dark:bg-primary text-on-primary dark:text-on-primary shadow-md' 
+                      : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
                   }`}
                   to={item.href}
                 >
@@ -276,23 +436,23 @@ const Navigation: React.FC = () => {
           {/* Regular User Menu (Non-Admin) */}
           {user.role === 'user' && (
             userNavItems.map((item) => (
-              <Link
-                key={item.href}
-                className={`flex items-center gap-md py-3 px-md rounded-lg mx-md transition-all ${
-                  isActive(item.href) 
-                    ? 'bg-secondary-container dark:bg-secondary-fixed-dim text-on-secondary-container dark:text-on-secondary-fixed-variant' 
-                    : 'text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high'
-                }`}
-                to={item.href}
-              >
-                <span className="material-symbols-outlined">{item.icon}</span>
-                <span className="font-label-bold text-label-bold flex-1">{item.label}</span>
-                {item.badge && (
-                  <span className="px-xs py-0.5 bg-error text-on-error rounded text-xs font-bold">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
+                <Link
+                  key={item.href}
+                  className={`flex items-center gap-md py-3 px-md rounded-lg mx-md transition-all ${
+                    isActive(item.href) 
+                      ? 'bg-primary dark:bg-primary text-on-primary dark:text-on-primary shadow-md' 
+                      : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
+                  }`}
+                  to={item.href}
+                >
+                  <span className="material-symbols-outlined">{item.icon}</span>
+                  <span className="font-label-bold text-label-bold flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="px-xs py-0.5 bg-error text-on-error rounded text-xs font-bold">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
             ))
           )}
         </nav>
@@ -384,6 +544,82 @@ const Navigation: React.FC = () => {
           ))
         )}
       </nav>
+
+      {/* Mobile Drawer/Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 top-16 bg-black/40 z-40" onClick={() => setIsMobileMenuOpen(false)}>
+          <div 
+            className="absolute right-gutter top-2 w-56 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant py-md flex flex-col z-50 animate-fade-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-md pb-sm border-b border-outline-variant/30">
+              <p className="font-bold text-on-surface text-body-md">{user.name}</p>
+              <p className="text-body-xs text-on-surface-variant capitalize">{user.role}</p>
+            </div>
+            
+            <div className="py-sm">
+              <Link 
+                to="/profil" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-sm px-md py-sm text-on-surface hover:bg-surface-container transition-colors font-body-md"
+              >
+                <span className="material-symbols-outlined text-[20px]">person</span>
+                Profil Saya
+              </Link>
+              <Link 
+                to="/pengaturan" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-sm px-md py-sm text-on-surface hover:bg-surface-container transition-colors font-body-md"
+              >
+                <span className="material-symbols-outlined text-[20px]">settings</span>
+                Pengaturan
+              </Link>
+            </div>
+
+            <hr className="border-outline-variant/30" />
+
+            <div className="pt-sm">
+              {user.role === 'admin' && (
+                <>
+                  <Link 
+                    to="/admin" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-sm px-md py-sm text-on-surface hover:bg-surface-container transition-colors font-body-md"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">dashboard</span>
+                    Dashboard Admin
+                  </Link>
+                  <Link 
+                    to="/admin/laporan" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-sm px-md py-sm text-on-surface hover:bg-surface-container transition-colors font-body-md"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">assignment</span>
+                    Kelola Laporan
+                  </Link>
+                  <Link 
+                    to="/admin/pengguna" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-sm px-md py-sm text-on-surface hover:bg-surface-container transition-colors font-body-md"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">people</span>
+                    Kelola Pengguna
+                  </Link>
+                  <hr className="my-sm border-outline-variant/30" />
+                </>
+              )}
+              
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-sm px-md py-sm text-error hover:bg-error-container/10 transition-colors w-full text-left font-body-md"
+              >
+                <span className="material-symbols-outlined text-[20px]">logout</span>
+                Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

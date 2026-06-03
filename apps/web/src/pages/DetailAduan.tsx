@@ -39,8 +39,25 @@ const DetailAduan: React.FC = () => {
   const [error, setError] = useState('');
   const [reply, setReply] = useState('');
   const [posting, setPosting] = useState(false);
+  const [liked, setLiked] = useState(false);
 
   const me = getStoredUser();
+
+  const handleLike = async () => {
+    if (!id) return;
+    if (!me) {
+      navigate('/masuk');
+      return;
+    }
+    if (liked) return;
+    try {
+      const res = await api.likeReport(id);
+      setReport((prev) => prev ? { ...prev, likeCount: res.likeCount } : null);
+      setLiked(true);
+    } catch (err) {
+      console.error('Gagal menyukai aduan:', err);
+    }
+  };
 
   const load = async () => {
     if (!id) return;
@@ -65,7 +82,10 @@ const DetailAduan: React.FC = () => {
       navigate('/');
       return;
     }
-    load();
+    const timer = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -104,7 +124,7 @@ const DetailAduan: React.FC = () => {
     return (
       <div className="bg-background min-h-screen">
         <Navigation />
-        <main className="pt-20 md:pl-64 px-gutter py-xl">
+        <main className={`pt-20 px-gutter py-xl ${me ? 'md:pl-64' : ''}`}>
           <p className="text-on-surface-variant">Memuat detail laporan...</p>
         </main>
       </div>
@@ -115,7 +135,7 @@ const DetailAduan: React.FC = () => {
     return (
       <div className="bg-background min-h-screen">
         <Navigation />
-        <main className="pt-20 md:pl-64 px-gutter py-xl">
+        <main className={`pt-20 px-gutter py-xl ${me ? 'md:pl-64' : ''}`}>
           <p className="p-md bg-error-container text-error rounded-lg">
             {error || 'Laporan tidak ditemukan'}
           </p>
@@ -139,7 +159,7 @@ const DetailAduan: React.FC = () => {
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen">
       <Navigation />
-      <main className="pt-20 md:pl-64 pb-xl">
+      <main className={`pt-20 pb-xl ${me ? 'md:pl-64' : ''}`}>
         <div className="max-w-[1280px] mx-auto px-gutter py-md">
           <nav className="flex items-center gap-xs mb-lg text-on-surface-variant font-body-sm">
             <Link className="hover:text-primary transition-colors" to="/">
@@ -208,6 +228,31 @@ const DetailAduan: React.FC = () => {
                         : (report.author?.fullName ?? 'Tidak diketahui')
                     }
                   />
+                </div>
+
+                <div className="flex items-center gap-md mt-lg pt-md border-t border-outline-variant/30 text-body-sm text-on-surface-variant">
+                  <button
+                    type="button"
+                    onClick={handleLike}
+                    className={`flex items-center gap-xs px-md py-sm rounded-full transition-colors font-semibold ${
+                      liked 
+                        ? 'bg-primary-container text-primary' 
+                        : 'hover:bg-surface-container-low text-on-surface-variant'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {liked ? 'thumb_up_filled' : 'thumb_up'}
+                    </span>
+                    <span>{report.likeCount} Suka</span>
+                  </button>
+                  <span className="flex items-center gap-xs px-md py-sm">
+                    <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
+                    <span>{comments.length} Komentar</span>
+                  </span>
+                  <span className="flex items-center gap-xs px-md py-sm">
+                    <span className="material-symbols-outlined text-[18px]">visibility</span>
+                    <span>{report.viewCount} Dilihat</span>
+                  </span>
                 </div>
 
                 {isAdmin && report.status !== 'resolved' && report.status !== 'rejected' && (

@@ -12,6 +12,7 @@ export default function LoginScreen() {
   const { signIn } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,9 +63,11 @@ export default function LoginScreen() {
         <SuraInput
           label="Kata Sandi"
           placeholder="••••••••"
-          secureTextEntry
+          secureTextEntry={!showPassword}
           value={password}
           onChangeText={setPassword}
+          rightIcon={showPassword ? 'visibility-off' : 'visibility'}
+          onRightIconPress={() => setShowPassword(!showPassword)}
         />
 
         <SuraButton title="Masuk Sekarang" onPress={handleLogin} loading={loading} />

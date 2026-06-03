@@ -1,6 +1,30 @@
 import * as Location from 'expo-location';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { API_BASE_URL } from '../config/api';
+
+const Storage = {
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      try { return localStorage.getItem(key); } catch { return null; }
+    }
+    return SecureStore.getItemAsync(key);
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      try { localStorage.setItem(key, value); } catch {}
+      return;
+    }
+    return SecureStore.setItemAsync(key, value);
+  },
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      try { localStorage.removeItem(key); } catch {}
+      return;
+    }
+    return SecureStore.deleteItemAsync(key);
+  }
+};
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -39,21 +63,21 @@ export type Report = {
 };
 
 export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return Storage.getItem(TOKEN_KEY);
 }
 
 export async function setAuth(token: string, user: AuthUser) {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  await Storage.setItem(TOKEN_KEY, token);
+  await Storage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export async function clearAuth() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(USER_KEY);
+  await Storage.removeItem(TOKEN_KEY);
+  await Storage.removeItem(USER_KEY);
 }
 
 export async function getStoredUser(): Promise<AuthUser | null> {
-  const raw = await SecureStore.getItemAsync(USER_KEY);
+  const raw = await Storage.getItem(USER_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw) as AuthUser;

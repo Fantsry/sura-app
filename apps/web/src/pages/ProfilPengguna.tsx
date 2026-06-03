@@ -130,7 +130,7 @@ const ProfilPengguna: React.FC = () => {
   const pct = Math.min(Math.round((points / nextThreshold) * 100), 100);
 
   return (
-    <React.Fragment>
+    <div className="bg-background text-on-surface min-h-screen">
       <Navigation />
       <main className="pt-20 md:pl-64 pb-xl px-gutter max-w-screen-2xl mx-auto">
         <header className="mb-xl">
@@ -357,7 +357,7 @@ const ProfilPengguna: React.FC = () => {
           </div>
         </div>
       </main>
-    </React.Fragment>
+    </div>
   );
 };
 

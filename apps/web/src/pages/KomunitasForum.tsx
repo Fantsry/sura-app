@@ -104,6 +104,8 @@ const KomunitasForum: React.FC = () => {
     navigate('/buat-postingan');
   };
 
+  const me = getStoredUser();
+
   const handleLikePost = async (postId: string) => {
     if (!me) {
       navigate('/masuk');
@@ -119,10 +121,8 @@ const KomunitasForum: React.FC = () => {
     }
   };
 
-  const me = getStoredUser();
-
   return (
-    <React.Fragment>
+    <div className="bg-background text-on-surface min-h-screen">
       <Navigation />
       <main className="pt-20 pb-xl md:pl-64 min-h-screen">
         <div className="max-w-[1280px] mx-auto px-gutter grid grid-cols-1 md:grid-cols-12 gap-lg">
@@ -391,7 +391,7 @@ const KomunitasForum: React.FC = () => {
       >
         <span className="material-symbols-outlined text-[32px]">add</span>
       </button>
-    </React.Fragment>
+    </div>
   );
 };
 

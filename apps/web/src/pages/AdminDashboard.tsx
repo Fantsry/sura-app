@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import {
@@ -17,7 +17,7 @@ const AdminDashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [actionId, setActionId] = useState<string | null>(null);
 
-  const load = () => {
+  const load = useCallback(() => {
     api.admin
       .dashboard()
       .then((data) => {
@@ -29,7 +29,7 @@ const AdminDashboard: React.FC = () => {
         if ((err as Error).message?.includes('401')) navigate('/masuk');
       })
       .finally(() => setLoading(false));
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -38,7 +38,7 @@ const AdminDashboard: React.FC = () => {
       return;
     }
     load();
-  }, [navigate]);
+  }, [load, navigate]);
 
   const handleStatus = async (id: string, status: string) => {
     setActionId(id);

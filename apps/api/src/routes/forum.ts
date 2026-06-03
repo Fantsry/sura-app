@@ -211,4 +211,30 @@ forum.post('/posts/:id/like', requireAuth, async (c) => {
   return c.json({ likeCount: updated.likeCount });
 });
 
+forum.delete('/posts/:id', requireAuth, async (c) => {
+  const id = c.req.param('id');
+  const authUser = c.get('user');
+
+  const [post] = await db
+    .select({ userId: forumPosts.userId })
+    .from(forumPosts)
+    .where(eq(forumPosts.id, id))
+    .limit(1);
+
+  if (!post) return c.json({ error: 'Postingan tidak ditemukan' }, 404);
+
+  const isAuthor = post.userId === authUser.sub;
+  const isAdmin = authUser.role === 'admin' || authUser.role === 'moderator';
+
+  if (!isAuthor && !isAdmin) {
+    return c.json({ error: 'Anda tidak memiliki akses untuk menghapus postingan ini' }, 403);
+  }
+
+  await db
+    .delete(forumPosts)
+    .where(eq(forumPosts.id, id));
+
+  return c.json({ message: 'Postingan berhasil dihapus' });
+});
+
 export default forum;

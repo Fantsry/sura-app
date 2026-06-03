@@ -8,6 +8,7 @@ import admin from './routes/admin';
 import news from './routes/news';
 import forum from './routes/forum';
 import statistics from './routes/statistics';
+import notificationsRoute from './routes/notifications';
 
 const app = new Hono();
 
@@ -36,6 +37,7 @@ api.route('/admin', admin);
 api.route('/news', news);
 api.route('/forum', forum);
 api.route('/statistics', statistics);
+api.route('/notifications', notificationsRoute);
 
 app.route('/api', api);
 

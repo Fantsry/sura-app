@@ -97,7 +97,7 @@ const FormLaporan: React.FC = () => {
     setAddress(addr);
   };
 
-  const useCurrentLocation = async () => {
+  const handleGetCurrentLocation = async () => {
     setLocLoading(true);
     setError('');
     try {
@@ -116,8 +116,10 @@ const FormLaporan: React.FC = () => {
       navigate('/masuk');
       return;
     }
-    useCurrentLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const timer = setTimeout(() => {
+      handleGetCurrentLocation();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [navigate]);
 
   const addImage = () => {
@@ -160,6 +162,7 @@ const FormLaporan: React.FC = () => {
         address,
         imageUrls,
         isAnonymous,
+        priority,
       });
       navigate('/laporanku');
     } catch (err) {
@@ -350,7 +353,7 @@ const FormLaporan: React.FC = () => {
                     </p>
                     <button
                       type="button"
-                      onClick={useCurrentLocation}
+                      onClick={handleGetCurrentLocation}
                       disabled={locLoading}
                       className="text-primary font-button text-body-sm flex items-center gap-xs hover:underline disabled:opacity-60"
                     >

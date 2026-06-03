@@ -52,7 +52,10 @@ const DetailPostingan: React.FC = () => {
       navigate('/komunitas');
       return;
     }
-    load();
+    const timer = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -90,6 +93,17 @@ const DetailPostingan: React.FC = () => {
       setLiked(true);
     } catch (err) {
       console.error('Gagal menyukai postingan:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!confirm('Apakah Anda yakin ingin menghapus postingan ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    try {
+      await api.deleteForumPost(id);
+      navigate('/komunitas');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus postingan');
     }
   };
 
@@ -131,6 +145,8 @@ const DetailPostingan: React.FC = () => {
     .join('')
     .toUpperCase();
 
+  const canDelete = me && (post.author?.id === me.id || me.role === 'admin' || me.role === 'moderator');
+
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen">
       <Navigation />
@@ -164,17 +180,29 @@ const DetailPostingan: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  {post.category && (
-                    <span
-                      className="px-sm py-xs rounded-full text-[10px] font-bold uppercase"
-                      style={{
-                        backgroundColor: `${post.category.color}22`,
-                        color: post.category.color,
-                      }}
-                    >
-                      {post.category.name}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-sm">
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="text-error hover:bg-error-container/20 p-2 rounded-full transition-colors flex items-center justify-center"
+                        title="Hapus Postingan"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                      </button>
+                    )}
+                    {post.category && (
+                      <span
+                        className="px-sm py-xs rounded-full text-[10px] font-bold uppercase"
+                        style={{
+                          backgroundColor: `${post.category.color}22`,
+                          color: post.category.color,
+                        }}
+                      >
+                        {post.category.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <h2 className="font-h1 text-h1 text-on-surface mb-md leading-snug">

@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api, setAuth } from '../lib/api';
+import { api, setAuth, getStoredUser } from '../lib/api';
 
 const Masuk: React.FC = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'register'>('login');
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (user) {
+      navigate(user.role === 'admin' || user.role === 'moderator' ? '/admin' : '/');
+    }
+  }, [navigate]);
 
   // login fields
   const [identifier, setIdentifier] = useState('');
@@ -68,9 +75,9 @@ const Masuk: React.FC = () => {
   };
 
   return (
-    <div className="bg-background min-h-screen flex flex-col lg:flex-row">
+    <div className="bg-background min-h-screen grid grid-cols-1 lg:grid-cols-2">
       {/* Left: Brand panel */}
-      <aside className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-container to-primary-fixed-dim text-on-primary p-xl flex-col justify-between relative overflow-hidden">
+      <aside className="hidden lg:flex bg-gradient-to-br from-primary via-primary-container to-primary-fixed-dim text-on-primary p-xl flex-col justify-between relative overflow-hidden w-full">
         <div className="absolute inset-0 opacity-10">
           <div
             className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-white blur-3xl"
@@ -82,7 +89,7 @@ const Masuk: React.FC = () => {
           ></div>
         </div>
 
-        <div className="relative">
+        <div className="relative w-full">
           <div className="flex items-center gap-md mb-xl">
             <div className="w-14 h-14 rounded-2xl bg-white text-primary flex items-center justify-center shadow-2xl">
               <span className="material-symbols-outlined text-4xl">campaign</span>
@@ -94,7 +101,7 @@ const Masuk: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative space-y-lg">
+        <div className="relative space-y-lg w-full">
           <h1 className="font-h1 text-[40px] leading-tight font-extrabold max-w-md">
             Bersama mengawal lingkungan kita.
           </h1>
@@ -110,13 +117,13 @@ const Masuk: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative text-body-sm opacity-75">
+        <div className="relative text-body-sm opacity-75 w-full">
           © 2026 Sura — Verified Official Portal.
         </div>
       </aside>
 
       {/* Right: Form panel */}
-      <main className="flex-1 flex items-center justify-center p-gutter">
+      <main className="flex items-center justify-center p-gutter w-full">
         <div className="w-full max-w-md">
           <Link
             to="/"
@@ -182,7 +189,7 @@ const Masuk: React.FC = () => {
               <form onSubmit={handleLogin} className="space-y-md">
                 <Field label="Email atau Username" icon="alternate_email">
                   <input
-                    className="w-full pl-12 pr-4 py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    className="w-full pl-12 pr-4 py-md bg-surface-container-low text-on-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     placeholder="admin@sura.app"
                     type="text"
                     value={identifier}
@@ -210,11 +217,11 @@ const Masuk: React.FC = () => {
 
               <div className="mt-lg pt-lg border-t border-outline-variant">
                 <p className="text-body-sm text-on-surface-variant mb-sm">Akun Demo:</p>
-                <div className="grid grid-cols-2 gap-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm">
                   <button
                     type="button"
                     onClick={() => fillDemo('admin')}
-                    className="flex flex-col items-start p-md bg-surface-container-low border border-outline-variant rounded-xl hover:border-primary transition-colors"
+                    className="w-full flex flex-col items-start p-md bg-surface-container-low border border-outline-variant rounded-xl hover:border-primary transition-colors text-left"
                   >
                     <span className="material-symbols-outlined text-primary mb-xs">
                       admin_panel_settings
@@ -227,7 +234,7 @@ const Masuk: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fillDemo('user')}
-                    className="flex flex-col items-start p-md bg-surface-container-low border border-outline-variant rounded-xl hover:border-primary transition-colors"
+                    className="w-full flex flex-col items-start p-md bg-surface-container-low border border-outline-variant rounded-xl hover:border-primary transition-colors text-left"
                   >
                     <span className="material-symbols-outlined text-primary mb-xs">
                       person
@@ -257,7 +264,7 @@ const Masuk: React.FC = () => {
               <form onSubmit={handleRegister} className="space-y-md">
                 <Field label="Nama Lengkap" icon="badge">
                   <input
-                    className="w-full pl-12 pr-4 py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    className="w-full pl-12 pr-4 py-md bg-surface-container-low text-on-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     placeholder="Budi Santoso"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
@@ -265,10 +272,10 @@ const Masuk: React.FC = () => {
                     minLength={2}
                   />
                 </Field>
-                <div className="grid grid-cols-2 gap-md">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
                   <Field label="Username" icon="alternate_email">
                     <input
-                      className="w-full pl-12 pr-4 py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                      className="w-full pl-12 pr-4 py-md bg-surface-container-low text-on-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       placeholder="budi"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
@@ -278,7 +285,7 @@ const Masuk: React.FC = () => {
                   </Field>
                   <Field label="No. Telepon" icon="phone">
                     <input
-                      className="w-full pl-12 pr-4 py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                      className="w-full pl-12 pr-4 py-md bg-surface-container-low text-on-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                       placeholder="0812xxxx"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -288,7 +295,7 @@ const Masuk: React.FC = () => {
                 <Field label="Email" icon="mail">
                   <input
                     type="email"
-                    className="w-full pl-12 pr-4 py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    className="w-full pl-12 pr-4 py-md bg-surface-container-low text-on-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                     placeholder="anda@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -367,7 +374,7 @@ function PasswordField({
           lock
         </span>
         <input
-          className="w-full pl-12 pr-12 py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+          className="w-full pl-12 pr-12 py-md bg-surface-container-low text-on-surface border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
           placeholder={placeholder}
           type={show ? 'text' : 'password'}
           value={value}

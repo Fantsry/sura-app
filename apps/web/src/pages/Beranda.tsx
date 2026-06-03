@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Navigation from '../components/Navigation';
-import { api, formatRelative, STATUS_META, type Report } from '../lib/api';
+import { api, formatRelative, STATUS_META, type Report, getStoredUser } from '../lib/api';
 
 const markerIcon = (color: string) =>
   L.divIcon({
@@ -92,7 +92,7 @@ const Beranda: React.FC = () => {
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen">
       <Navigation />
-      <main className="pt-20 md:pl-64 min-h-screen">
+      <main className={`pt-20 min-h-screen ${getStoredUser() ? 'md:pl-64' : ''}`}>
         <div className="flex flex-col md:flex-row md:h-[calc(100vh-5rem)]">
           {/* Map Side */}
           <section className="flex-1 relative bg-surface-container-low overflow-hidden border-b md:border-b-0 md:border-r border-outline-variant min-h-[420px]">
@@ -308,6 +308,10 @@ const Beranda: React.FC = () => {
                         <span className="flex items-center gap-xs">
                           <span className="material-symbols-outlined text-[12px]">visibility</span>
                           {r.viewCount}
+                        </span>
+                        <span className="flex items-center gap-xs">
+                          <span className="material-symbols-outlined text-[12px]">thumb_up</span>
+                          {r.likeCount}
                         </span>
                         <span className="flex items-center gap-xs">
                           <span className="material-symbols-outlined text-[12px]">chat_bubble</span>

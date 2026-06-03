@@ -24,6 +24,7 @@ const AdminLaporan: React.FC = () => {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
   const load = async () => {
@@ -49,7 +50,10 @@ const AdminLaporan: React.FC = () => {
       navigate('/masuk');
       return;
     }
-    load();
+    const timer = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, navigate]);
 
@@ -64,7 +68,7 @@ const AdminLaporan: React.FC = () => {
 
   const exportCsv = () => {
     const header = ['ID', 'Judul', 'Pengguna', 'Kategori', 'Tanggal', 'Status', 'Alamat'];
-    const rows = reports.map((r) => [
+    const rows = filtered.map((r) => [
       r.id.slice(0, 8),
       `"${r.title.replace(/"/g, '""')}"`,
       r.author?.fullName ?? 'Anonim',
@@ -82,6 +86,18 @@ const AdminLaporan: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return reports;
+    return reports.filter(
+      (r) =>
+        r.title.toLowerCase().includes(term) ||
+        (r.address ?? '').toLowerCase().includes(term) ||
+        (r.author?.fullName ?? '').toLowerCase().includes(term) ||
+        (r.category?.name ?? '').toLowerCase().includes(term)
+    );
+  }, [reports, search]);
 
   const summaryCards = useMemo(
     () => [
@@ -155,7 +171,16 @@ const AdminLaporan: React.FC = () => {
           <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-outline-variant/30">
             <div className="p-md border-b border-outline-variant flex flex-wrap justify-between items-center gap-md">
               <h2 className="font-h2 text-h2 text-on-surface">Daftar Laporan</h2>
-              <div className="flex flex-wrap gap-sm">
+              <div className="flex flex-wrap gap-sm items-center">
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+                  <input
+                    className="pl-9 pr-3 py-1.5 bg-surface-container-low border border-outline-variant rounded-lg text-body-sm focus:ring-2 focus:ring-primary outline-none w-48"
+                    placeholder="Cari judul / alamat..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
                 {STATUS_FILTERS.map((f) => (
                   <button
                     key={f.key}
@@ -215,14 +240,14 @@ const AdminLaporan: React.FC = () => {
                         Memuat data...
                       </td>
                     </tr>
-                  ) : reports.length === 0 ? (
+                  ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-lg py-xl text-center text-on-surface-variant">
                         Tidak ada laporan untuk filter ini.
                       </td>
                     </tr>
                   ) : (
-                    reports.map((r) => {
+                    filtered.map((r) => {
                       const meta = STATUS_META[r.status] ?? STATUS_META.pending;
                       const initials = (r.author?.fullName ?? 'Anonim')
                         .split(' ')

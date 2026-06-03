@@ -1,6 +1,13 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 
-export const expoSQLite = SQLite.openDatabaseSync('sura.db');
+export const expoSQLite = Platform.OS === 'web'
+  ? ({
+      execAsync: async () => {},
+      runAsync: async () => {},
+      getAllAsync: async () => [],
+    } as any)
+  : SQLite.openDatabaseSync('sura.db');
 
 export async function initializeTables() {
   await expoSQLite.execAsync(`

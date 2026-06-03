@@ -250,7 +250,7 @@ admin.get('/statistics', async (c) => {
     .leftJoin(categories, eq(reports.categoryId, categories.id))
     .groupBy(categories.name, categories.color);
 
-  const monthly = await db.execute(sql`
+  const monthlyRaw = await db.execute(sql`
     SELECT to_char(created_at, 'YYYY-MM') as month, COUNT(*)::int as count
     FROM reports
     WHERE created_at >= NOW() - INTERVAL '12 months'
@@ -258,10 +258,12 @@ admin.get('/statistics', async (c) => {
     ORDER BY month ASC
   `);
 
+  const monthly = Array.isArray(monthlyRaw) ? monthlyRaw : (monthlyRaw as any).rows ?? [];
+
   return c.json({
     byStatus,
     byCategory,
-    monthly: monthly,
+    monthly,
   });
 });
 
