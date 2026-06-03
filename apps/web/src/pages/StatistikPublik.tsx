@@ -1,170 +1,438 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import Navigation from '../components/Navigation';
+import { api } from '../lib/api';
 
-const StatistikPublik = () => {
-    return (
-        <React.Fragment>
-            <Navigation />
-
-            <main className="pt-20 lg:pl-64 pb-xl px-gutter min-h-screen">
-                <div className="max-w-max-width mx-auto">
-
-                    <header className="mb-xl">
-                        <h2 className="font-h1 text-h1 text-primary mb-xs">Transparansi Data Publik</h2>
-                        <p className="font-body-lg text-body-lg text-secondary">Memantau efektivitas layanan publik dan keamanan lingkungan secara real-time.</p>
-                    </header>
-
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-lg">
-
-                        <div className="md:col-span-4 bg-surface-container-lowest p-xl rounded-xl shadow-sm border border-outline-variant flex flex-col justify-center">
-                            <span className="font-label-bold text-label-bold text-secondary uppercase tracking-widest mb-sm">Total Laporan Masuk</span>
-                            <div className="flex items-baseline gap-xs">
-                                <h3 className="font-h1 text-[3.5rem] leading-none font-extrabold text-primary">12.482</h3>
-                                <span className="text-success text-body-sm font-bold text-[#1a8b4a]">+12% bln ini</span>
-                            </div>
-                            <p className="font-body-sm text-body-sm text-outline mt-md">Data akumulasi dari seluruh wilayah operasional Sura sejak Januari 2024.</p>
-                        </div>
-                        <div className="md:col-span-4 bg-primary text-on-primary p-xl rounded-xl shadow-sm flex flex-col justify-center">
-                            <span className="font-label-bold text-label-bold text-primary-fixed uppercase tracking-widest mb-sm">Tingkat Penyelesaian</span>
-                            <div className="flex items-baseline gap-xs">
-                                <h3 className="font-h1 text-[3.5rem] leading-none font-extrabold">94.2%</h3>
-                            </div>
-                            <div className="w-full bg-primary-container h-2 rounded-full mt-lg overflow-hidden">
-                                <div className="bg-on-primary h-full w-[94.2%]"></div>
-                            </div>
-                            <p className="font-body-sm text-body-sm text-primary-fixed mt-md">11.758 laporan telah diverifikasi dan ditindaklanjuti oleh otoritas terkait.</p>
-                        </div>
-                        <div className="md:col-span-4 bg-surface-container-lowest p-xl rounded-xl shadow-sm border border-outline-variant flex flex-col justify-center">
-                            <span className="font-label-bold text-label-bold text-secondary uppercase tracking-widest mb-sm">Waktu Respon Rata-rata</span>
-                            <div className="flex items-baseline gap-xs">
-                                <h3 className="font-h1 text-[3.5rem] leading-none font-extrabold text-primary">42</h3>
-                                <span className="font-h3 text-h3 text-secondary">Menit</span>
-                            </div>
-                            <p className="font-body-sm text-body-sm text-outline mt-md">Kecepatan petugas lapangan dalam menangani laporan kategori darurat.</p>
-                        </div>
-
-                        <div className="md:col-span-8 bg-surface-container-lowest p-xl rounded-xl shadow-sm border border-outline-variant">
-                            <div className="flex justify-between items-center mb-xl">
-                                <h3 className="font-h3 text-h3 text-on-surface">Tren Laporan Bulanan</h3>
-                                <select className="bg-surface-container border-none text-body-sm rounded-lg focus:ring-primary">
-                                    <option>Tahun 2024</option>
-                                    <option>Tahun 2023</option>
-                                </select>
-                            </div>
-
-                            <div className="h-64 flex items-end justify-between gap-sm relative pt-xl">
-
-                                <div className="absolute inset-0 flex flex-col justify-between border-b border-outline-variant py-2">
-                                    <div className="border-t border-dashed border-outline-variant w-full h-0"></div>
-                                    <div className="border-t border-dashed border-outline-variant w-full h-0"></div>
-                                    <div className="border-t border-dashed border-outline-variant w-full h-0"></div>
-                                </div>
-
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[40%] rounded-t-lg transition-all hover:opacity-80 relative group">
-                                    <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-variant text-primary text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Jan: 1.2k</span>
-                                </div>
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[55%] rounded-t-lg transition-all hover:opacity-80 relative group"></div>
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[45%] rounded-t-lg transition-all hover:opacity-80 relative group"></div>
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[70%] rounded-t-lg transition-all hover:opacity-80 relative group"></div>
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[85%] rounded-t-lg transition-all hover:opacity-80 relative group"></div>
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[60%] rounded-t-lg transition-all hover:opacity-80 relative group"></div>
-                                <div className="w-full bg-gradient-to-t from-primary-container to-primary h-[90%] rounded-t-lg transition-all hover:opacity-80 relative group"></div>
-                            </div>
-                            <div className="flex justify-between mt-md text-label-bold text-outline uppercase tracking-tighter">
-                                <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mei</span><span>Jun</span><span>Jul</span>
-                            </div>
-                        </div>
-
-                        <div className="md:col-span-4 bg-surface-container-lowest p-xl rounded-xl shadow-sm border border-outline-variant">
-                            <h3 className="font-h3 text-h3 text-on-surface mb-xl">Kategori Terbanyak</h3>
-                            <div className="space-y-lg">
-                                <div className="space-y-xs">
-                                    <div className="flex justify-between text-body-md">
-                                        <span className="flex items-center gap-sm"><span className="w-3 h-3 bg-error rounded-full"></span>Bencana Alam</span>
-                                        <span className="font-bold">35%</span>
-                                    </div>
-                                    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-                                        <div className="bg-error h-full w-[35%]"></div>
-                                    </div>
-                                </div>
-                                <div className="space-y-xs">
-                                    <div className="flex justify-between text-body-md">
-                                        <span className="flex items-center gap-sm"><span className="w-3 h-3 bg-primary rounded-full"></span>Fasilitas Umum</span>
-                                        <span className="font-bold">28%</span>
-                                    </div>
-                                    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-                                        <div className="bg-primary h-full w-[28%]"></div>
-                                    </div>
-                                </div>
-                                <div className="space-y-xs">
-                                    <div className="flex justify-between text-body-md">
-                                        <span className="flex items-center gap-sm"><span className="w-3 h-3 bg-secondary rounded-full"></span>Pencurian</span>
-                                        <span className="font-bold">15%</span>
-                                    </div>
-                                    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-                                        <div className="bg-secondary h-full w-[15%]"></div>
-                                    </div>
-                                </div>
-                                <div className="space-y-xs">
-                                    <div className="flex justify-between text-body-md">
-                                        <span className="flex items-center gap-sm"><span className="w-3 h-3 bg-outline rounded-full"></span>Sampah/Polusi</span>
-                                        <span className="font-bold">22%</span>
-                                    </div>
-                                    <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-                                        <div className="bg-outline h-full w-[22%]"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="md:col-span-12 bg-surface-container-lowest p-xl rounded-xl shadow-sm border border-outline-variant">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-xl">
-                                <div>
-                                    <h3 className="font-h3 text-h3 text-on-surface">Peta Panas (Heatmap) Lokasi Aduan</h3>
-                                    <p className="font-body-sm text-body-sm text-outline">Konsentrasi laporan tertinggi berada di wilayah Pusat Kota dan Kawasan Industri.</p>
-                                </div>
-                                <div className="flex bg-surface-container p-1 rounded-lg">
-                                    <button className="px-md py-xs bg-white text-primary font-label-bold text-label-bold rounded shadow-sm">Kepadatan Laporan</button>
-                                    <button className="px-md py-xs text-on-surface-variant font-label-bold text-label-bold">Kecelakaan Lalu Lintas</button>
-                                </div>
-                            </div>
-
-                            <div className="relative w-full h-[400px] rounded-xl overflow-hidden bg-surface-container-highest">
-                                <img alt="Peta Lokasi Laporan" className="w-full h-full object-cover mix-blend-multiply opacity-40" data-alt="A clean, highly detailed topographic map of a major city with abstract heatmap overlays in shades of deep blue and vibrant red. The map features minimalist white and gray street lines, while the heat zones represent dense areas of activity. The lighting is bright and modern, creating a professional dashboard aesthetic for a data visualization interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvol9Nm0hAKSi3jXzwX-pXbZkeNSNY3tXstEqAExQ-J3kwFb1jTE6WFNHhWe27-b6cLUorIw6oWaSe_LDzj6sJu9dSrNLteflVAkpEsg8Ha38hdxHkqQVU1DSn9DT2gbwj3X7LNBPikAVXHGh_e3AGlFpsqxTxQRtiKQ83yDEo-xpoTMg8ezZpS7NPKlE3KO4GTSFLahrZZQ6enrEb11-61_fUIy7ijA9fjjAMm3GYSZVbR55-9rxQll4VaLNQ8DhaGMcK-EIsc6Q" />
-
-                                <div className="absolute top-[30%] left-[45%] w-32 h-32 bg-error rounded-full blur-[60px] opacity-30"></div>
-                                <div className="absolute top-[50%] left-[20%] w-24 h-24 bg-primary rounded-full blur-[50px] opacity-20"></div>
-                                <div className="absolute top-[65%] left-[60%] w-40 h-40 bg-error rounded-full blur-[70px] opacity-40"></div>
-
-                                <div className="absolute top-[32%] left-[48%] flex flex-col items-center">
-                                    <span className="material-symbols-outlined text-error text-3xl" style={{ "fontVariationSettings": "'FILL' 1" }}>location_on</span>
-                                    <div className="bg-white/90 backdrop-blur px-sm py-xs rounded-md shadow-lg border border-outline-variant -mt-2">
-                                        <p className="font-label-bold text-[10px] text-error">AREA KRITIS</p>
-                                        <p className="text-[11px] font-bold">Kecamatan Gambir</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <footer className="w-full py-xl px-gutter flex flex-col md:flex-row justify-between items-center gap-md bg-surface-container-highest dark:bg-inverse-surface border-t border-outline-variant dark:border-outline lg:ml-64 lg:w-[calc(100%-16rem)]">
-                <div className="text-center md:text-left">
-                    <p className="font-label-bold text-label-bold text-on-surface dark:text-inverse-on-surface">Sura (Suara Rakyat)</p>
-                    <p className="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant mt-1">© 2024 Sura. Verified Official Portal.</p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-lg">
-                    <Link className="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors" to="#">Privacy Policy</Link>
-                    <Link className="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors" to="#">Terms of Service</Link>
-                    <Link className="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors" to="#">Contact Support</Link>
-                    <Link className="font-body-sm text-body-sm text-on-surface-variant dark:text-outline-variant hover:text-primary transition-colors" to="#">Report Abuse</Link>
-                </div>
-            </footer>
-
-        </React.Fragment>
-    );
+type Stats = {
+  totalReports: number;
+  verifiedReports: number;
+  resolvedReports: number;
+  pendingReports: number;
+  resolutionRate: number;
+  byCategory: Array<{ name: string | null; color: string | null; count: number }>;
+  monthly: Array<{ month: string; count: number }>;
+  mapPoints: Array<{ latitude: number | null; longitude: number | null; status: string }>;
 };
+
+const STATUS_COLOR: Record<string, string> = {
+  pending: '#ba1a1a',
+  verified: '#1e40af',
+  in_progress: '#00288e',
+  resolved: '#1a8b4a',
+  rejected: '#666',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Menunggu',
+  verified: 'Diverifikasi',
+  in_progress: 'Diproses',
+  resolved: 'Selesai',
+  rejected: 'Ditolak',
+};
+
+const StatistikPublik: React.FC = () => {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api
+      .getPublicStats()
+      .then((s) => setStats(s as Stats))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : 'Gagal memuat statistik')
+      )
+      .finally(() => setLoading(false));
+  }, []);
+
+  const months = useMemo(() => {
+    if (!stats?.monthly) return [];
+    return stats.monthly.map((row) => ({
+      label: formatMonthLabel(row.month),
+      count: row.count,
+    }));
+  }, [stats]);
+
+  const maxMonth = useMemo(
+    () => months.reduce((m, r) => Math.max(m, r.count), 1),
+    [months]
+  );
+
+  const totalCategoryCount = useMemo(
+    () => (stats?.byCategory ?? []).reduce((sum, r) => sum + r.count, 0),
+    [stats]
+  );
+
+  const validMapPoints = useMemo(
+    () =>
+      (stats?.mapPoints ?? []).filter(
+        (p): p is { latitude: number; longitude: number; status: string } =>
+          p.latitude !== null && p.longitude !== null
+      ),
+    [stats]
+  );
+
+  const mapCenter: [number, number] = validMapPoints[0]
+    ? [validMapPoints[0].latitude, validMapPoints[0].longitude]
+    : [-6.2, 106.816666];
+
+  return (
+    <React.Fragment>
+      <Navigation />
+      <main className="pt-20 md:pl-64 pb-xl px-gutter min-h-screen">
+        <div className="max-w-max-width mx-auto">
+          <header className="mb-xl">
+            <p className="text-primary font-label-bold tracking-widest mb-xs">
+              TRANSPARANSI PUBLIK
+            </p>
+            <h1 className="font-h1 text-h1 text-on-surface">Statistik &amp; Data Layanan</h1>
+            <p className="text-on-surface-variant mt-xs">
+              Pantau efektivitas pelayanan publik dan keamanan lingkungan secara real-time.
+            </p>
+          </header>
+
+          {error && (
+            <p className="p-md bg-error-container text-error rounded-xl mb-lg">{error}</p>
+          )}
+
+          {loading ? (
+            <SkeletonStat />
+          ) : stats ? (
+            <div className="space-y-lg">
+              {/* Hero stat cards */}
+              <section className="grid grid-cols-1 md:grid-cols-3 gap-md">
+                <HeroCard
+                  variant="surface"
+                  label="Total Laporan"
+                  value={stats.totalReports.toLocaleString('id-ID')}
+                  sub="Akumulasi seluruh laporan."
+                  icon="folder_open"
+                />
+                <HeroCard
+                  variant="primary"
+                  label="Tingkat Penyelesaian"
+                  value={`${stats.resolutionRate}%`}
+                  sub={`${stats.resolvedReports.toLocaleString('id-ID')} laporan selesai`}
+                  icon="task_alt"
+                  progress={stats.resolutionRate}
+                />
+                <div className="grid grid-cols-2 gap-md">
+                  <HeroSmall
+                    label="Diverifikasi"
+                    value={stats.verifiedReports}
+                    icon="verified"
+                    tone="bg-secondary-container text-on-secondary-container"
+                  />
+                  <HeroSmall
+                    label="Menunggu"
+                    value={stats.pendingReports}
+                    icon="pending"
+                    tone="bg-error-container text-error"
+                  />
+                </div>
+              </section>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-md">
+                {/* Monthly trend */}
+                <section className="lg:col-span-8 bg-surface-container-lowest p-lg rounded-2xl shadow-sm border border-outline-variant">
+                  <div className="flex justify-between items-center mb-lg">
+                    <div>
+                      <h3 className="font-h3 text-h3 text-on-surface">Tren Bulanan</h3>
+                      <p className="text-body-sm text-on-surface-variant">
+                        12 bulan terakhir
+                      </p>
+                    </div>
+                    {months.length > 0 && (
+                      <span className="px-md py-xs bg-primary text-on-primary rounded-full text-label-bold">
+                        {months.reduce((s, m) => s + m.count, 0)} laporan
+                      </span>
+                    )}
+                  </div>
+
+                  {months.length === 0 ? (
+                    <div className="py-xl text-center text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[60px] text-outline">
+                        bar_chart
+                      </span>
+                      <p className="mt-md">Belum ada data tren laporan.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="h-72 flex items-end justify-between gap-sm relative pt-xl">
+                        <div className="absolute inset-x-0 inset-y-xl flex flex-col justify-between">
+                          {[100, 75, 50, 25, 0].map((p) => (
+                            <div
+                              key={p}
+                              className="border-t border-dashed border-outline-variant w-full relative"
+                            >
+                              <span className="absolute -left-2 -top-2 text-[10px] text-outline">
+                                {Math.round((maxMonth * p) / 100)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        {months.map((m, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 flex flex-col justify-end relative group"
+                          >
+                            <div
+                              className="bg-gradient-to-t from-primary to-primary-fixed-dim rounded-t-lg transition-all hover:from-primary hover:to-error-container"
+                              style={{
+                                height: `${Math.max((m.count / maxMonth) * 100, 4)}%`,
+                              }}
+                            />
+                            <span className="absolute -top-1 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-xs font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
+                              {m.label}: {m.count}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between mt-md text-label-bold text-outline uppercase">
+                        {months.map((m, i) => (
+                          <span key={i} className="flex-1 text-center">
+                            {m.label}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </section>
+
+                {/* Category pie */}
+                <section className="lg:col-span-4 bg-surface-container-lowest p-lg rounded-2xl shadow-sm border border-outline-variant">
+                  <h3 className="font-h3 text-h3 text-on-surface mb-md">Sebaran Kategori</h3>
+
+                  {stats.byCategory.length === 0 ? (
+                    <p className="text-on-surface-variant text-body-sm py-md">
+                      Belum ada data kategori.
+                    </p>
+                  ) : (
+                    <div className="space-y-md">
+                      {/* Bars */}
+                      {stats.byCategory.map((c, i) => {
+                        const pct =
+                          totalCategoryCount > 0
+                            ? Math.round((c.count / totalCategoryCount) * 1000) / 10
+                            : 0;
+                        return (
+                          <div className="space-y-xs" key={`${c.name}-${i}`}>
+                            <div className="flex justify-between items-center">
+                              <span className="flex items-center gap-sm text-body-md">
+                                <span
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: c.color ?? '#999' }}
+                                ></span>
+                                {c.name ?? 'Tanpa Kategori'}
+                              </span>
+                              <span className="font-bold text-body-sm">
+                                {c.count} <span className="text-outline">({pct}%)</span>
+                              </span>
+                            </div>
+                            <div className="w-full bg-surface-container h-2.5 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${pct}%`,
+                                  backgroundColor: c.color ?? '#666',
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* Map */}
+              <section className="bg-surface-container-lowest p-lg rounded-2xl shadow-sm border border-outline-variant">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-md mb-md">
+                  <div>
+                    <h3 className="font-h3 text-h3 text-on-surface">Peta Sebaran Laporan</h3>
+                    <p className="font-body-sm text-on-surface-variant">
+                      {validMapPoints.length} titik laporan terverifikasi.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-md text-body-sm">
+                    {Object.entries(STATUS_COLOR).filter(([k]) =>
+                      ['verified', 'in_progress', 'resolved'].includes(k)
+                    ).map(([key, color]) => (
+                      <LegendDot
+                        key={key}
+                        color={color}
+                        label={STATUS_LABEL[key]}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative w-full h-[480px] rounded-2xl overflow-hidden border border-outline-variant">
+                  {validMapPoints.length === 0 ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-container-low">
+                      <span className="material-symbols-outlined text-[60px] text-outline">
+                        map
+                      </span>
+                      <p className="text-on-surface-variant mt-md">
+                        Belum ada titik laporan terverifikasi.
+                      </p>
+                    </div>
+                  ) : (
+                    <MapContainer
+                      center={mapCenter}
+                      zoom={11}
+                      className="absolute inset-0 w-full h-full"
+                    >
+                      <TileLayer
+                        attribution='&copy; OpenStreetMap'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {validMapPoints.map((p, i) => (
+                        <CircleMarker
+                          key={i}
+                          center={[p.latitude, p.longitude]}
+                          radius={9}
+                          pathOptions={{
+                            color: STATUS_COLOR[p.status] ?? '#666',
+                            fillColor: STATUS_COLOR[p.status] ?? '#666',
+                            fillOpacity: 0.65,
+                            weight: 2,
+                          }}
+                        >
+                          <Tooltip>{STATUS_LABEL[p.status] ?? p.status}</Tooltip>
+                        </CircleMarker>
+                      ))}
+                    </MapContainer>
+                  )}
+                </div>
+              </section>
+
+              {/* CTA */}
+              <section className="bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-2xl shadow-lg p-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-md">
+                <div>
+                  <h3 className="font-h2 text-h2 mb-xs">Punya laporan baru?</h3>
+                  <p className="text-body-md opacity-90">
+                    Bantu kami menambah transparansi data publik dengan satu laporan Anda.
+                  </p>
+                </div>
+                <Link
+                  to="/lapor"
+                  className="px-lg py-md bg-on-primary text-primary rounded-full font-button shadow flex items-center gap-xs hover:scale-105 transition-transform"
+                >
+                  Buat Laporan
+                  <span className="material-symbols-outlined">arrow_forward</span>
+                </Link>
+              </section>
+            </div>
+          ) : null}
+        </div>
+      </main>
+    </React.Fragment>
+  );
+};
+
+function HeroCard({
+  variant,
+  label,
+  value,
+  sub,
+  icon,
+  progress,
+}: {
+  variant: 'primary' | 'surface';
+  label: string;
+  value: string;
+  sub: string;
+  icon: string;
+  progress?: number;
+}) {
+  const baseCls =
+    variant === 'primary'
+      ? 'bg-gradient-to-br from-primary to-primary-container text-on-primary'
+      : 'bg-surface-container-lowest border border-outline-variant text-on-surface';
+  return (
+    <div className={`${baseCls} p-lg rounded-2xl shadow-sm`}>
+      <div className="flex items-center justify-between mb-md">
+        <span className="material-symbols-outlined text-3xl opacity-70">{icon}</span>
+        <span className="text-label-bold uppercase opacity-80">{label}</span>
+      </div>
+      <p className="font-h1 text-[44px] leading-none font-extrabold">{value}</p>
+      {progress !== undefined && (
+        <div className="w-full bg-white/20 h-2 rounded-full mt-md overflow-hidden">
+          <div
+            className="bg-on-primary h-full transition-all"
+            style={{ width: `${Math.min(progress, 100)}%` }}
+          />
+        </div>
+      )}
+      <p className="text-body-sm mt-sm opacity-80">{sub}</p>
+    </div>
+  );
+}
+
+function HeroSmall({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: string;
+  tone: string;
+}) {
+  return (
+    <div className={`${tone} p-md rounded-2xl flex flex-col justify-between`}>
+      <span className="material-symbols-outlined text-2xl opacity-70 mb-md">{icon}</span>
+      <div>
+        <p className="font-h2 text-[28px] leading-none font-extrabold">
+          {value.toLocaleString('id-ID')}
+        </p>
+        <p className="text-label-bold uppercase opacity-80 mt-xs">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-xs">
+      <span
+        className="w-3 h-3 rounded-full inline-block ring-2 ring-white"
+        style={{ backgroundColor: color }}
+      ></span>
+      {label}
+    </span>
+  );
+}
+
+function SkeletonStat() {
+  return (
+    <div className="space-y-lg">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-md">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-44 bg-surface-container-low rounded-2xl border border-outline-variant animate-pulse"
+          />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-md">
+        <div className="lg:col-span-8 h-80 bg-surface-container-low rounded-2xl border border-outline-variant animate-pulse" />
+        <div className="lg:col-span-4 h-80 bg-surface-container-low rounded-2xl border border-outline-variant animate-pulse" />
+      </div>
+      <div className="h-96 bg-surface-container-low rounded-2xl border border-outline-variant animate-pulse" />
+    </div>
+  );
+}
+
+function formatMonthLabel(month: string): string {
+  const [, m] = month.split('-');
+  const names = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  return names[Number(m) - 1] ?? month;
+}
 
 export default StatistikPublik;

@@ -62,6 +62,49 @@ news.get('/', async (c) => {
   );
 });
 
+news.get('/:id', async (c) => {
+  const id = c.req.param('id');
+
+  const [row] = await db
+    .select({
+      article: newsArticles,
+      author: {
+        id: users.id,
+        fullName: users.fullName,
+        avatarUrl: users.avatarUrl,
+      },
+    })
+    .from(newsArticles)
+    .leftJoin(users, eq(newsArticles.authorId, users.id))
+    .where(eq(newsArticles.id, id))
+    .limit(1);
+
+  if (!row || !row.article.isPublished) {
+    return c.json({ error: 'Artikel tidak ditemukan' }, 404);
+  }
+
+  // bump view count (fire and forget)
+  db.update(newsArticles)
+    .set({ viewCount: (row.article.viewCount ?? 0) + 1 })
+    .where(eq(newsArticles.id, id))
+    .catch(() => {});
+
+  return c.json({
+    id: row.article.id,
+    title: row.article.title,
+    excerpt: row.article.excerpt,
+    content: row.article.content,
+    category: row.article.category,
+    imageUrl: row.article.imageUrl,
+    isFeatured: row.article.isFeatured,
+    viewCount: (row.article.viewCount ?? 0) + 1,
+    tags: row.article.tags,
+    publishedAt: row.article.publishedAt,
+    author: row.author?.fullName ?? 'Admin Sura',
+    authorAvatar: row.author?.avatarUrl ?? null,
+  });
+});
+
 news.post(
   '/',
   requireAuth,

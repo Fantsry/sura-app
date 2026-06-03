@@ -45,16 +45,26 @@ statistics.get('/public', async (c) => {
     )
     .limit(500);
 
+  const monthlyRows = await db.execute(sql`
+    SELECT to_char(created_at, 'YYYY-MM') as month, COUNT(*)::int as count
+    FROM reports
+    WHERE created_at >= NOW() - INTERVAL '12 months'
+    GROUP BY month
+    ORDER BY month ASC
+  `);
+
+  const totalCount = total.count;
+  const resolvedCount = resolved.count;
+
   return c.json({
-    totalReports: total.count,
+    totalReports: totalCount,
     verifiedReports: verified.count,
-    resolvedReports: resolved.count,
+    resolvedReports: resolvedCount,
     pendingReports: pending.count,
     resolutionRate:
-      total.count > 0
-        ? Math.round((resolved.count / total.count) * 100)
-        : 0,
+      totalCount > 0 ? Math.round((resolvedCount / totalCount) * 1000) / 10 : 0,
     byCategory,
+    monthly: Array.isArray(monthlyRows) ? monthlyRows : [],
     mapPoints: mapPoints.map((p) => ({
       latitude: p.latitude ? Number(p.latitude) : null,
       longitude: p.longitude ? Number(p.longitude) : null,

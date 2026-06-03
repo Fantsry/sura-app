@@ -1,114 +1,345 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
+import {
+  api,
+  formatDate,
+  getStoredUser,
+  STATUS_META,
+  type Report,
+} from '../lib/api';
+
+const STATUS_FILTERS: Array<{ key: string; label: string }> = [
+  { key: 'all', label: 'Semua' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'verified', label: 'Terverifikasi' },
+  { key: 'in_progress', label: 'Diproses' },
+  { key: 'resolved', label: 'Selesai' },
+  { key: 'rejected', label: 'Ditolak' },
+];
 
 const AdminLaporan: React.FC = () => {
+  const navigate = useNavigate();
+  const [reports, setReports] = useState<Report[]>([]);
+  const [stats, setStats] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<string>('all');
+  const [error, setError] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [dash, all] = await Promise.all([
+        api.admin.dashboard(),
+        api.admin.reports(filter === 'all' ? undefined : filter),
+      ]);
+      setStats(dash.stats);
+      setReports(all);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
+      navigate('/masuk');
+      return;
+    }
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, navigate]);
+
+  const handleStatus = async (id: string, status: string) => {
+    try {
+      await api.admin.updateReportStatus(id, status);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal update status');
+    }
+  };
+
+  const exportCsv = () => {
+    const header = ['ID', 'Judul', 'Pengguna', 'Kategori', 'Tanggal', 'Status', 'Alamat'];
+    const rows = reports.map((r) => [
+      r.id.slice(0, 8),
+      `"${r.title.replace(/"/g, '""')}"`,
+      r.author?.fullName ?? 'Anonim',
+      r.category?.name ?? '-',
+      formatDate(r.createdAt),
+      r.status,
+      `"${(r.address ?? '').replace(/"/g, '""')}"`,
+    ]);
+    const csv = [header, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `laporan-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const summaryCards = useMemo(
+    () => [
+      {
+        key: 'pending',
+        label: 'Pending',
+        value: stats.pendingReports ?? 0,
+        icon: 'pending_actions',
+        cls: 'text-secondary bg-secondary-container/30',
+      },
+      {
+        key: 'verified',
+        label: 'Disetujui',
+        value: stats.verifiedReports ?? 0,
+        icon: 'verified',
+        cls: 'text-primary bg-primary-container/30',
+      },
+      {
+        key: 'resolved',
+        label: 'Selesai',
+        value: stats.resolvedReports ?? 0,
+        icon: 'task_alt',
+        cls: 'text-primary bg-primary-container/30',
+      },
+      {
+        key: 'total',
+        label: 'Total Laporan',
+        value: stats.totalReports ?? 0,
+        icon: 'folder_open',
+        cls: 'text-tertiary bg-tertiary-container/30',
+      },
+    ],
+    [stats]
+  );
+
   return (
     <div className="bg-surface text-on-surface min-h-screen">
       <Navigation />
-      
-      <main className="lg:ml-64 pt-20 min-h-screen">
+      <main className="md:ml-64 pt-20 min-h-screen">
         <div className="max-w-max-width mx-auto p-gutter space-y-xl">
           <header className="mb-xl">
             <h1 className="font-h1 text-h1 text-on-surface mb-sm">Kelola Laporan</h1>
-            <p className="font-body-md text-on-surface-variant">Moderasi dan validasi laporan dari masyarakat</p>
+            <p className="font-body-md text-on-surface-variant">
+              Moderasi dan validasi laporan dari masyarakat
+            </p>
           </header>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-md mb-xl">
-            <div className="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30">
-              <div className="flex items-center justify-between mb-sm">
-                <span className="material-symbols-outlined text-primary text-2xl">pending_actions</span>
-                <span className="text-xs font-bold text-secondary bg-secondary-container/30 px-2 py-1 rounded-full">Pending</span>
+          {error && (
+            <p className="p-md bg-error-container text-error rounded-lg">{error}</p>
+          )}
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-md">
+            {summaryCards.map((card) => (
+              <div
+                key={card.key}
+                className="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30"
+              >
+                <div className="flex items-center justify-between mb-sm">
+                  <span className="material-symbols-outlined text-primary text-2xl">
+                    {card.icon}
+                  </span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${card.cls}`}>
+                    {card.label}
+                  </span>
+                </div>
+                <h3 className="font-h2 text-h2 text-on-surface">{card.value}</h3>
               </div>
-              <h3 className="font-h2 text-h2 text-on-surface">42</h3>
-              <p className="font-body-sm text-on-surface-variant">Menunggu validasi</p>
-            </div>
-            
-            <div className="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30">
-              <div className="flex items-center justify-between mb-sm">
-                <span className="material-symbols-outlined text-primary text-2xl">verified</span>
-                <span className="text-xs font-bold text-primary bg-primary-container/30 px-2 py-1 rounded-full">Disetujui</span>
-              </div>
-              <h3 className="font-h2 text-h2 text-on-surface">1,120</h3>
-              <p className="font-body-sm text-on-surface-variant">Laporan disetujui</p>
-            </div>
-            
-            <div className="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30">
-              <div className="flex items-center justify-between mb-sm">
-                <span className="material-symbols-outlined text-error text-2xl">block</span>
-                <span className="text-xs font-bold text-error bg-error-container/30 px-2 py-1 rounded-full">Ditolak</span>
-              </div>
-              <h3 className="font-h2 text-h2 text-error">122</h3>
-              <p className="font-body-sm text-on-surface-variant">Laporan ditolak</p>
-            </div>
-            
-            <div className="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30">
-              <div className="flex items-center justify-between mb-sm">
-                <span className="material-symbols-outlined text-tertiary text-2xl">autorenew</span>
-                <span className="text-xs font-bold text-tertiary bg-tertiary-container/30 px-2 py-1 rounded-full">Proses</span>
-              </div>
-              <h3 className="font-h2 text-h2 text-tertiary">89</h3>
-              <p className="font-body-sm text-on-surface-variant">Sedang diproses</p>
-            </div>
+            ))}
           </div>
 
           <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-outline-variant/30">
-            <div className="p-md border-b border-outline-variant flex justify-between items-center">
+            <div className="p-md border-b border-outline-variant flex flex-wrap justify-between items-center gap-md">
               <h2 className="font-h2 text-h2 text-on-surface">Daftar Laporan</h2>
-              <div className="flex gap-sm">
-                <button className="flex items-center gap-xs text-primary font-button px-md py-sm rounded-lg hover:bg-primary-container/10 transition-colors">
-                  <span className="material-symbols-outlined">filter_list</span>
-                  Filter
-                </button>
-                <button className="flex items-center gap-xs text-primary font-button px-md py-sm rounded-lg hover:bg-primary-container/10 transition-colors">
-                  <span className="material-symbols-outlined">download</span>
-                  Export
+              <div className="flex flex-wrap gap-sm">
+                {STATUS_FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setFilter(f.key)}
+                    className={`px-md py-1.5 rounded-full text-body-sm font-button border transition-colors ${
+                      filter === f.key
+                        ? 'bg-primary text-on-primary border-primary'
+                        : 'bg-surface-container border-outline-variant text-on-surface-variant hover:bg-surface-container-high'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  className="flex items-center gap-xs text-primary font-button px-md py-sm rounded-lg border border-outline-variant hover:bg-primary-container/10 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Export CSV
                 </button>
               </div>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-container-low border-b border-outline-variant">
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase">ID</th>
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase">Judul</th>
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase">Pengguna</th>
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase">Kategori</th>
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase">Tanggal</th>
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase">Status</th>
-                    <th className="px-lg py-md font-label-bold text-label-bold text-on-surface-variant uppercase text-right">Aksi</th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase">
+                      ID
+                    </th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase">
+                      Judul
+                    </th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase">
+                      Pengguna
+                    </th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase">
+                      Kategori
+                    </th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase">
+                      Tanggal
+                    </th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase">
+                      Status
+                    </th>
+                    <th className="px-lg py-md font-label-bold text-on-surface-variant uppercase text-right">
+                      Aksi
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/20">
-                  <tr className="hover:bg-surface-container transition-colors">
-                    <td className="px-lg py-md font-body-sm text-on-surface-variant">#001</td>
-                    <td className="px-lg py-md">
-                      <p className="font-body-md font-semibold text-on-surface">Pohon Tumbang Jl. Sudirman</p>
-                    </td>
-                    <td className="px-lg py-md">
-                      <div className="flex items-center gap-sm">
-                        <div className="w-6 h-6 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed font-bold text-xs">AS</div>
-                        <span className="font-body-sm text-on-surface">Andi Saputra</span>
-                      </div>
-                    </td>
-                    <td className="px-lg py-md">
-                      <span className="text-label-bold text-primary bg-primary-container/10 inline-block px-sm py-xs rounded-full">Infrastruktur</span>
-                    </td>
-                    <td className="px-lg py-md font-body-sm text-on-surface-variant">12 Okt 2023</td>
-                    <td className="px-lg py-md">
-                      <span className="px-md py-xs rounded-full bg-secondary-container/30 text-secondary font-label-bold text-[10px] uppercase">Pending</span>
-                    </td>
-                    <td className="px-lg py-md text-right">
-                      <div className="flex gap-sm justify-end">
-                        <button className="p-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-all">
-                          <span className="material-symbols-outlined text-sm">visibility</span>
-                        </button>
-                        <button className="p-sm rounded-lg bg-tertiary-container text-on-tertiary-container hover:opacity-90 transition-all">
-                          <span className="material-symbols-outlined text-sm">edit</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} className="px-lg py-md text-on-surface-variant">
+                        Memuat data...
+                      </td>
+                    </tr>
+                  ) : reports.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-lg py-xl text-center text-on-surface-variant">
+                        Tidak ada laporan untuk filter ini.
+                      </td>
+                    </tr>
+                  ) : (
+                    reports.map((r) => {
+                      const meta = STATUS_META[r.status] ?? STATUS_META.pending;
+                      const initials = (r.author?.fullName ?? 'Anonim')
+                        .split(' ')
+                        .map((s) => s[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase();
+                      return (
+                        <tr key={r.id} className="hover:bg-surface-container transition-colors">
+                          <td className="px-lg py-md font-body-sm text-on-surface-variant whitespace-nowrap">
+                            #{r.id.slice(0, 8)}
+                          </td>
+                          <td className="px-lg py-md max-w-xs">
+                            <p className="font-body-md font-semibold text-on-surface line-clamp-1">
+                              {r.title}
+                            </p>
+                            {r.address && (
+                              <p className="text-body-sm text-on-surface-variant line-clamp-1">
+                                {r.address}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-lg py-md whitespace-nowrap">
+                            <div className="flex items-center gap-sm">
+                              <div className="w-6 h-6 rounded-full bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed font-bold text-xs">
+                                {initials}
+                              </div>
+                              <span className="font-body-sm text-on-surface">
+                                {r.author?.fullName ?? 'Anonim'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-lg py-md whitespace-nowrap">
+                            <span
+                              className="text-label-bold inline-block px-sm py-xs rounded-full"
+                              style={{
+                                color: r.category?.color ?? '#666',
+                                backgroundColor: r.category?.color
+                                  ? `${r.category.color}22`
+                                  : '#eee',
+                              }}
+                            >
+                              {r.category?.name ?? 'Umum'}
+                            </span>
+                          </td>
+                          <td className="px-lg py-md font-body-sm text-on-surface-variant whitespace-nowrap">
+                            {formatDate(r.createdAt)}
+                          </td>
+                          <td className="px-lg py-md whitespace-nowrap">
+                            <span
+                              className={`px-md py-xs rounded-full font-label-bold text-[10px] uppercase ${meta.bg} ${meta.color}`}
+                            >
+                              {meta.label}
+                            </span>
+                          </td>
+                          <td className="px-lg py-md text-right whitespace-nowrap">
+                            <div className="flex gap-sm justify-end">
+                              <Link
+                                to={`/detail?id=${r.id}`}
+                                className="p-sm rounded-lg bg-primary text-on-primary hover:opacity-90 transition-all"
+                                title="Lihat detail"
+                              >
+                                <span className="material-symbols-outlined text-sm">
+                                  visibility
+                                </span>
+                              </Link>
+                              {r.status === 'pending' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatus(r.id, 'verified')}
+                                    className="p-sm rounded-lg bg-tertiary-container text-on-tertiary-container hover:opacity-90"
+                                    title="Verifikasi"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">check</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatus(r.id, 'rejected')}
+                                    className="p-sm rounded-lg bg-error text-on-error hover:opacity-90"
+                                    title="Tolak"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">close</span>
+                                  </button>
+                                </>
+                              )}
+                              {r.status === 'verified' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatus(r.id, 'in_progress')}
+                                  className="p-sm rounded-lg bg-primary-container text-on-primary-container hover:opacity-90"
+                                  title="Mulai Proses"
+                                >
+                                  <span className="material-symbols-outlined text-sm">
+                                    play_arrow
+                                  </span>
+                                </button>
+                              )}
+                              {r.status === 'in_progress' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatus(r.id, 'resolved')}
+                                  className="p-sm rounded-lg bg-success text-white hover:opacity-90"
+                                  title="Tandai Selesai"
+                                  style={{ background: '#1a8b4a' }}
+                                >
+                                  <span className="material-symbols-outlined text-sm">
+                                    task_alt
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

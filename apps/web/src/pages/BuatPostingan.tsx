@@ -62,8 +62,8 @@ const BuatPostingan: React.FC = () => {
       navigate('/masuk');
       return;
     }
-    fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api'}/forum/categories`)
-      .then((r) => (r.ok ? r.json() : []))
+    api
+      .getForumCategories()
       .then(setCategories)
       .catch(() => {});
   }, [navigate]);
@@ -104,7 +104,6 @@ const BuatPostingan: React.FC = () => {
       if (includeLocation && point && address) {
         tagsArr.push(`loc:${point.lat.toFixed(5)},${point.lng.toFixed(5)}`);
       }
-      // Pick a forum category by name match (fallback to first)
       const matched = categories.find((c) =>
         c.name.toLowerCase().includes(tag.toLowerCase())
       );
@@ -112,25 +111,12 @@ const BuatPostingan: React.FC = () => {
         includeLocation && address
           ? `${content}\n\n📍 Lokasi: ${address}`
           : content;
-      const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
-      const token = localStorage.getItem('auth_token');
-      const res = await fetch(`${apiBase}/forum/posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          title,
-          content: finalContent,
-          categoryId: matched?.id ?? categories[0]?.id,
-          tags: tagsArr,
-        }),
+      await api.createForumPost({
+        title,
+        content: finalContent,
+        categoryId: matched?.id ?? categories[0]?.id,
+        tags: tagsArr,
       });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j.error ?? 'Gagal mengirim postingan');
-      }
       navigate('/komunitas');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengirim postingan');
@@ -142,7 +128,7 @@ const BuatPostingan: React.FC = () => {
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen">
       <Navigation />
-      <main className="pt-20 lg:pl-64 pb-xl px-gutter max-w-max-width mx-auto">
+      <main className="pt-20 md:pl-64 pb-xl px-gutter max-w-max-width mx-auto">
         <nav className="flex items-center gap-xs mb-lg text-on-surface-variant font-body-sm">
           <Link className="hover:text-primary transition-colors" to="/komunitas">
             Komunitas

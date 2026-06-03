@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { getStoredUser } from '../lib/api';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { clearAuth, getStoredUser } from '../lib/api';
 
 interface User {
   id: string;
@@ -21,6 +21,7 @@ const Navigation: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -55,9 +56,7 @@ const Navigation: React.FC = () => {
   ];
 
   const allNavItems = [...userNavItems, ...adminNavItems];
-  const visibleNavItems = allNavItems.filter(item => 
-    !item.roles || (user && item.roles.includes(user.role))
-  );
+  void allNavItems; // legacy reference, kept for future filtering
 
   const isActive = (href: string) => {
     if (href === '/') {
@@ -67,8 +66,10 @@ const Navigation: React.FC = () => {
   };
 
   const handleLogout = () => {
+    clearAuth();
     setUser(null);
-    // Implement logout logic
+    setIsMobileMenuOpen(false);
+    navigate('/masuk');
   };
 
   if (!user) {
@@ -118,12 +119,19 @@ const Navigation: React.FC = () => {
           </button>
           
           <div className="flex items-center gap-sm">
-            <div className="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden">
-              <img 
-                alt="Profile" 
-                className="w-full h-full object-cover" 
-                src={user.avatar} 
-              />
+            <div className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center overflow-hidden">
+              {user.avatar ? (
+                <img alt="Profile" className="w-full h-full object-cover" src={user.avatar} />
+              ) : (
+                <span className="font-bold text-xs">
+                  {user.name
+                    .split(' ')
+                    .map((s) => s[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase()}
+                </span>
+              )}
             </div>
             <div className="hidden lg:block">
               <p className="font-body-sm text-on-surface font-medium">{user.name}</p>
@@ -189,7 +197,7 @@ const Navigation: React.FC = () => {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col h-screen fixed left-0 top-0 pt-20 pb-md border-r border-outline-variant dark:border-outline bg-surface-container-low dark:bg-surface-container-lowest w-64">
+      <aside className="hidden md:flex flex-col h-screen fixed left-0 top-0 pt-20 pb-md border-r border-outline-variant dark:border-outline bg-surface-container-low dark:bg-surface-container-lowest w-64">
         {/* Sidebar Header */}
         <div className="px-md mb-lg">
           <div className="flex items-center gap-sm mb-sm">
@@ -307,7 +315,11 @@ const Navigation: React.FC = () => {
           </button>
 
           <div className="pt-2 border-t border-outline-variant">
-            <button className="w-full py-2 text-on-surface-variant hover:text-error font-body-sm transition-colors">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full py-2 text-on-surface-variant hover:text-error font-body-sm transition-colors"
+            >
               Sign Out
             </button>
           </div>

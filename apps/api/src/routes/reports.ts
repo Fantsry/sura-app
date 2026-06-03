@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { categories, reports, users } from '../db/schema';
+import { categories, reportComments, reports, users } from '../db/schema';
 import { serializeReport } from '../lib/serializers';
 import {
   optionalAuth,
@@ -374,5 +374,100 @@ reportsRoute.delete('/:id', requireAuth, async (c) => {
   await db.delete(reports).where(eq(reports.id, id));
   return c.json({ message: 'Laporan berhasil dihapus' });
 });
+
+// ===== Comments / Discussion =====
+
+const createCommentSchema = z.object({
+  content: z.string().min(1).max(2000),
+  parentId: z.string().uuid().optional(),
+});
+
+reportsRoute.get('/:id/comments', optionalAuth, async (c) => {
+  const id = c.req.param('id');
+  const rows = await db
+    .select({
+      comment: reportComments,
+      author: {
+        id: users.id,
+        username: users.username,
+        fullName: users.fullName,
+        avatarUrl: users.avatarUrl,
+        role: users.role,
+      },
+    })
+    .from(reportComments)
+    .leftJoin(users, eq(reportComments.userId, users.id))
+    .where(eq(reportComments.reportId, id))
+    .orderBy(reportComments.createdAt);
+
+  return c.json(
+    rows.map(({ comment, author }) => ({
+      id: comment.id,
+      content: comment.content,
+      isOfficial: comment.isOfficial,
+      parentId: comment.parentId,
+      createdAt: comment.createdAt,
+      author,
+    }))
+  );
+});
+
+reportsRoute.post(
+  '/:id/comments',
+  requireAuth,
+  zValidator('json', createCommentSchema),
+  async (c) => {
+    const authUser = c.get('user');
+    const id = c.req.param('id');
+    const body = c.req.valid('json');
+
+    const [report] = await db
+      .select({ id: reports.id })
+      .from(reports)
+      .where(eq(reports.id, id))
+      .limit(1);
+    if (!report) return c.json({ error: 'Laporan tidak ditemukan' }, 404);
+
+    const [created] = await db
+      .insert(reportComments)
+      .values({
+        reportId: id,
+        userId: authUser.sub,
+        content: body.content,
+        parentId: body.parentId,
+        isOfficial: ['admin', 'moderator'].includes(authUser.role),
+      })
+      .returning();
+
+    await db
+      .update(reports)
+      .set({ commentCount: sql`${reports.commentCount} + 1` })
+      .where(eq(reports.id, id));
+
+    const [author] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        fullName: users.fullName,
+        avatarUrl: users.avatarUrl,
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.id, authUser.sub))
+      .limit(1);
+
+    return c.json(
+      {
+        id: created.id,
+        content: created.content,
+        isOfficial: created.isOfficial,
+        parentId: created.parentId,
+        createdAt: created.createdAt,
+        author,
+      },
+      201
+    );
+  }
+);
 
 export default reportsRoute;

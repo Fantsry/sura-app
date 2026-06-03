@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { forumCategories, forumComments, forumPosts, users } from '../db/schema';
 import { requireAuth, type AuthVariables } from '../middleware/auth';
@@ -98,6 +98,11 @@ forum.get('/posts/:id', async (c) => {
 
   if (!row) return c.json({ error: 'Postingan tidak ditemukan' }, 404);
 
+  await db
+    .update(forumPosts)
+    .set({ viewCount: sql`${forumPosts.viewCount} + 1` })
+    .where(eq(forumPosts.id, id));
+
   const comments = await db
     .select({
       comment: forumComments,
@@ -178,8 +183,32 @@ forum.post(
       })
       .returning();
 
+    await db
+      .update(forumPosts)
+      .set({ commentCount: sql`${forumPosts.commentCount} + 1` })
+      .where(eq(forumPosts.id, postId));
+
     return c.json(created, 201);
   }
 );
+
+forum.post('/posts/:id/like', requireAuth, async (c) => {
+  const id = c.req.param('id');
+  const [post] = await db
+    .select({ id: forumPosts.id })
+    .from(forumPosts)
+    .where(eq(forumPosts.id, id))
+    .limit(1);
+
+  if (!post) return c.json({ error: 'Postingan tidak ditemukan' }, 404);
+
+  const [updated] = await db
+    .update(forumPosts)
+    .set({ likeCount: sql`${forumPosts.likeCount} + 1` })
+    .where(eq(forumPosts.id, id))
+    .returning();
+
+  return c.json({ likeCount: updated.likeCount });
+});
 
 export default forum;

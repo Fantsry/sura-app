@@ -9,6 +9,10 @@ export type AuthUser = {
   avatarUrl?: string | null;
   points?: number;
   isVerified?: boolean;
+  isActive?: boolean;
+  phoneNumber?: string | null;
+  createdAt?: string;
+  lastLogin?: string | null;
 };
 
 export type Report = {
@@ -29,8 +33,53 @@ export type Report = {
   commentCount: number;
   createdAt: string;
   updatedAt: string;
+  resolvedAt?: string | null;
   category: { id: string; name: string; color: string; icon?: string } | null;
   author: { id: string; username: string; fullName: string; avatarUrl?: string } | null;
+};
+
+export type ReportComment = {
+  id: string;
+  content: string;
+  isOfficial: boolean;
+  parentId: string | null;
+  createdAt: string;
+  author: {
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl?: string | null;
+    role: string;
+  } | null;
+};
+
+export type NewsArticle = {
+  id: string;
+  title: string;
+  excerpt: string | null;
+  content: string;
+  category: string | null;
+  imageUrl: string | null;
+  isFeatured: boolean;
+  viewCount: number;
+  tags: string[];
+  publishedAt: string;
+  author: string;
+  authorAvatar?: string | null;
+};
+
+export type ForumPost = {
+  id: string;
+  title: string;
+  content: string;
+  isPinned: boolean;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  tags: string[];
+  createdAt: string;
+  author: { id: string; username: string; fullName: string; avatarUrl?: string | null } | null;
+  category: { id: string; name: string; color: string } | null;
 };
 
 function getToken(): string | null {
@@ -100,13 +149,30 @@ export const api = {
 
   me: () => apiRequest<AuthUser>('/auth/me'),
 
+  updateProfile: (data: {
+    fullName?: string;
+    phoneNumber?: string;
+    avatarUrl?: string | null;
+  }) =>
+    apiRequest<AuthUser>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiRequest<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+
   getCategories: () =>
     apiRequest<Array<{ id: string; name: string; color: string; icon: string }>>('/categories'),
 
-  getReports: (params?: { limit?: number; mine?: boolean }) => {
+  getReports: (params?: { limit?: number; mine?: boolean; status?: string }) => {
     const q = new URLSearchParams();
     if (params?.limit) q.set('limit', String(params.limit));
     if (params?.mine) q.set('mine', 'true');
+    if (params?.status) q.set('status', params.status);
     return apiRequest<Report[]>(`/reports?${q}`);
   },
 
@@ -130,6 +196,15 @@ export const api = {
 
   getReport: (id: string) => apiRequest<Report>(`/reports/${id}`),
 
+  getReportComments: (id: string) =>
+    apiRequest<ReportComment[]>(`/reports/${id}/comments`),
+
+  postReportComment: (id: string, content: string, parentId?: string) =>
+    apiRequest<ReportComment>(`/reports/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, parentId }),
+    }),
+
   createReport: (data: {
     title: string;
     description: string;
@@ -146,7 +221,61 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  getPublicStats: () => apiRequest<Record<string, unknown>>('/statistics/public'),
+  // News
+  getNews: (params?: { limit?: number; featured?: boolean }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set('limit', String(params.limit));
+    if (params?.featured) q.set('featured', 'true');
+    return apiRequest<NewsArticle[]>(`/news?${q}`);
+  },
+  getNewsById: (id: string) => apiRequest<NewsArticle>(`/news/${id}`),
+
+  // Forum
+  getForumCategories: () =>
+    apiRequest<Array<{ id: string; name: string; color: string; icon: string }>>(
+      '/forum/categories'
+    ),
+  getForumPosts: (params?: { limit?: number; categoryId?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set('limit', String(params.limit));
+    if (params?.categoryId) q.set('categoryId', params.categoryId);
+    return apiRequest<ForumPost[]>(`/forum/posts?${q}`);
+  },
+  getForumPost: (id: string) =>
+    apiRequest<ForumPost & { comments: Array<{ id: string; content: string; createdAt: string; author: { id: string; fullName: string; avatarUrl?: string | null } | null }> }>(
+      `/forum/posts/${id}`
+    ),
+  createForumPost: (data: {
+    title: string;
+    content: string;
+    categoryId?: string;
+    tags?: string[];
+  }) =>
+    apiRequest<ForumPost>('/forum/posts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  likeForumPost: (id: string) =>
+    apiRequest<{ likeCount: number }>(`/forum/posts/${id}/like`, {
+      method: 'POST',
+    }),
+  createForumComment: (id: string, content: string, parentId?: string) =>
+    apiRequest<any>(`/forum/posts/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, parentId }),
+    }),
+
+  getPublicStats: () =>
+    apiRequest<{
+      totalReports: number;
+      verifiedReports: number;
+      resolvedReports: number;
+      pendingReports: number;
+      resolutionRate: number;
+      byCategory: Array<{ name: string | null; color: string | null; count: number }>;
+      monthly: Array<{ month: string; count: number }>;
+      mapPoints: Array<{ latitude: number | null; longitude: number | null; status: string }>;
+    }>('/statistics/public'),
 
   admin: {
     dashboard: () => apiRequest<{ stats: Record<string, number>; pendingReports: Report[] }>('/admin/dashboard'),
@@ -157,10 +286,86 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ status, notes }),
       }),
-    users: () => apiRequest<AuthUser[]>('/admin/users'),
-    statistics: () => apiRequest<Record<string, unknown>>('/admin/statistics'),
+    users: (role?: string) =>
+      apiRequest<AuthUser[]>(`/admin/users${role ? `?role=${role}` : ''}`),
+    updateUser: (
+      id: string,
+      data: { role?: string; isActive?: boolean; isVerified?: boolean }
+    ) =>
+      apiRequest<AuthUser>(`/admin/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    statistics: () =>
+      apiRequest<{
+        byStatus: Array<{ status: string; count: number }>;
+        byCategory: Array<{ category: string | null; color: string | null; count: number }>;
+        monthly: unknown;
+      }>('/admin/statistics'),
   },
 };
+
+export const STATUS_META: Record<
+  string,
+  { label: string; bg: string; color: string; dot: string }
+> = {
+  pending: { label: 'Menunggu', bg: 'bg-error-container', color: 'text-error', dot: 'bg-error' },
+  verified: {
+    label: 'Terverifikasi',
+    bg: 'bg-secondary-container',
+    color: 'text-on-secondary-container',
+    dot: 'bg-primary',
+  },
+  in_progress: {
+    label: 'Diproses',
+    bg: 'bg-secondary-container',
+    color: 'text-on-secondary-container',
+    dot: 'bg-primary',
+  },
+  resolved: {
+    label: 'Selesai',
+    bg: 'bg-tertiary-fixed',
+    color: 'text-on-tertiary-fixed',
+    dot: 'bg-outline',
+  },
+  rejected: { label: 'Ditolak', bg: 'bg-error-container', color: 'text-error', dot: 'bg-error' },
+};
+
+export function formatRelative(dateInput?: string | Date | null): string {
+  if (!dateInput) return '';
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  const diff = Date.now() - d.getTime();
+  if (Number.isNaN(diff)) return '';
+  const sec = Math.round(diff / 1000);
+  if (sec < 60) return 'Baru saja';
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min} menit lalu`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr} jam lalu`;
+  const day = Math.round(hr / 24);
+  if (day < 7) return `${day} hari lalu`;
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function formatDate(dateInput?: string | Date | null): string {
+  if (!dateInput) return '-';
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+export function formatDateTime(dateInput?: string | Date | null): string {
+  if (!dateInput) return '-';
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export async function getCurrentLocation(): Promise<{
   latitude: number;

@@ -1,13 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
-import { api, getStoredUser, type Report } from '../lib/api';
+import {
+  api,
+  formatRelative,
+  getStoredUser,
+  STATUS_META,
+  type Report,
+} from '../lib/api';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Record<string, number>>({});
   const [pending, setPending] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const load = () => {
     api.admin
@@ -16,7 +24,10 @@ const AdminDashboard: React.FC = () => {
         setStats(data.stats);
         setPending(data.pendingReports);
       })
-      .catch(() => navigate('/masuk'))
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Gagal memuat dashboard');
+        if ((err as Error).message?.includes('401')) navigate('/masuk');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -30,100 +41,243 @@ const AdminDashboard: React.FC = () => {
   }, [navigate]);
 
   const handleStatus = async (id: string, status: string) => {
-    await api.admin.updateReportStatus(id, status);
-    load();
+    setActionId(id);
+    try {
+      await api.admin.updateReportStatus(id, status);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal update status');
+    } finally {
+      setActionId(null);
+    }
   };
+
+  const cards = useMemo(
+    () => [
+      {
+        key: 'pending',
+        label: 'Pending',
+        sub: 'Menunggu review',
+        value: stats.pendingReports ?? 0,
+        icon: 'pending_actions',
+        bg: 'bg-error-container',
+        text: 'text-error',
+      },
+      {
+        key: 'verified',
+        label: 'Terverifikasi',
+        sub: 'Siap ditindak',
+        value: stats.verifiedReports ?? 0,
+        icon: 'verified',
+        bg: 'bg-secondary-container',
+        text: 'text-on-secondary-container',
+      },
+      {
+        key: 'resolved',
+        label: 'Selesai',
+        sub: 'Sudah ditangani',
+        value: stats.resolvedReports ?? 0,
+        icon: 'task_alt',
+        bg: 'bg-primary-container',
+        text: 'text-on-primary-container',
+      },
+      {
+        key: 'users',
+        label: 'Pengguna Aktif',
+        sub: `Total ${stats.totalUsers ?? 0} terdaftar`,
+        value: stats.activeUsers ?? 0,
+        icon: 'people',
+        bg: 'bg-tertiary-fixed',
+        text: 'text-on-tertiary-fixed',
+      },
+    ],
+    [stats]
+  );
 
   return (
     <div className="bg-surface text-on-surface min-h-screen">
       <Navigation />
-      <main className="lg:ml-64 pt-20 min-h-screen">
+      <main className="md:ml-64 pt-20 min-h-screen">
         <div className="max-w-max-width mx-auto p-gutter space-y-xl">
-          {loading ? (
-            <p>Memuat dashboard...</p>
-          ) : (
-            <>
-              <header className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md">
-                <StatCard label="Total Laporan" value={stats.totalReports} />
-                <StatCard label="Pending" value={stats.pendingReports} color="text-secondary" />
-                <StatCard label="Terverifikasi" value={stats.verifiedReports} color="text-primary" />
-                <StatCard label="Selesai" value={stats.resolvedReports} color="text-primary" />
-              </header>
-              <section>
-                <h3 className="font-h2 mb-md">Laporan Perlu Moderasi</h3>
-                <div className="bg-surface-container-lowest rounded-xl border overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-surface-container-low border-b">
-                      <tr>
-                        <th className="px-lg py-md font-label-bold">Laporan</th>
-                        <th className="px-lg py-md font-label-bold">Lokasi</th>
-                        <th className="px-lg py-md font-label-bold">Status</th>
-                        <th className="px-lg py-md font-label-bold text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pending.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="px-lg py-md text-on-surface-variant">
-                            Tidak ada laporan pending
-                          </td>
-                        </tr>
-                      ) : (
-                        pending.map((r) => (
-                          <tr key={r.id} className="border-b border-outline-variant/20">
-                            <td className="px-lg py-md">
-                              <p className="font-semibold">{r.title}</p>
-                              <p className="text-body-sm text-on-surface-variant line-clamp-1">{r.description}</p>
-                            </td>
-                            <td className="px-lg py-md text-body-sm">{r.address ?? '-'}</td>
-                            <td className="px-lg py-md">
-                              <span className="px-md py-xs rounded-full bg-secondary-container/30 text-secondary text-[10px] font-bold uppercase">
-                                {r.status}
-                              </span>
-                            </td>
-                            <td className="px-lg py-md text-right">
-                              <div className="flex gap-sm justify-end">
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatus(r.id, 'verified')}
-                                  className="p-sm rounded-lg bg-primary text-on-primary"
-                                >
-                                  <span className="material-symbols-outlined">check</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatus(r.id, 'rejected')}
-                                  className="p-sm rounded-lg bg-error text-on-error"
-                                >
-                                  <span className="material-symbols-outlined">close</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </>
+          <header className="flex flex-col md:flex-row md:items-center justify-between gap-md">
+            <div>
+              <p className="text-primary font-label-bold tracking-widest mb-xs">
+                ADMIN PORTAL
+              </p>
+              <h1 className="font-h1 text-h1 text-on-surface">Dashboard Moderasi</h1>
+              <p className="text-on-surface-variant">
+                Pantau status laporan dan ambil tindakan dari satu tempat.
+              </p>
+            </div>
+            <div className="flex gap-sm">
+              <Link
+                to="/admin/laporan"
+                className="px-md py-sm bg-primary text-on-primary rounded-full font-button flex items-center gap-xs"
+              >
+                <span className="material-symbols-outlined text-[18px]">assignment</span>
+                Semua Laporan
+              </Link>
+              <Link
+                to="/admin/pengguna"
+                className="px-md py-sm bg-surface-container-low border border-outline-variant rounded-full font-button flex items-center gap-xs"
+              >
+                <span className="material-symbols-outlined text-[18px]">people</span>
+                Pengguna
+              </Link>
+            </div>
+          </header>
+
+          {error && (
+            <p className="p-md bg-error-container text-error rounded-xl">{error}</p>
           )}
+
+          {/* Stat cards */}
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-md">
+            {cards.map((c) => (
+              <article
+                key={c.key}
+                className={`p-lg rounded-2xl shadow-sm border border-outline-variant/20 ${c.bg} ${c.text}`}
+              >
+                <div className="flex items-center justify-between mb-md">
+                  <span className="material-symbols-outlined text-3xl opacity-70">
+                    {c.icon}
+                  </span>
+                  <span className="text-label-bold uppercase opacity-80">{c.label}</span>
+                </div>
+                <p className="font-h1 text-[40px] leading-none font-extrabold">
+                  {loading ? '…' : c.value.toLocaleString('id-ID')}
+                </p>
+                <p className="text-body-sm mt-sm opacity-80">{c.sub}</p>
+              </article>
+            ))}
+          </section>
+
+          {/* Pending moderation table */}
+          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-lg border-b border-outline-variant flex items-center justify-between flex-wrap gap-md">
+              <div>
+                <h2 className="font-h2 text-h2 text-on-surface">
+                  Antrean Moderasi
+                </h2>
+                <p className="text-body-sm text-on-surface-variant">
+                  Laporan terbaru yang perlu Anda review.
+                </p>
+              </div>
+              <Link
+                to="/admin/laporan"
+                className="text-primary font-button flex items-center gap-xs hover:underline"
+              >
+                Lihat semua
+                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="p-xl text-center text-on-surface-variant">
+                Memuat antrean...
+              </div>
+            ) : pending.length === 0 ? (
+              <div className="p-xl text-center">
+                <span className="material-symbols-outlined text-[60px] text-success">
+                  task_alt
+                </span>
+                <h3 className="font-h3 text-h3 text-on-surface mt-md">Antrean Bersih!</h3>
+                <p className="text-on-surface-variant mt-xs">
+                  Tidak ada laporan yang perlu dimoderasi saat ini.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-outline-variant/30">
+                {pending.map((r) => {
+                  const meta = STATUS_META[r.status] ?? STATUS_META.pending;
+                  return (
+                    <li
+                      key={r.id}
+                      className="p-md md:p-lg hover:bg-surface-container/40 transition-colors"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center gap-md">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-sm mb-xs">
+                            <span
+                              className="px-sm py-xs rounded-full text-[10px] font-bold uppercase"
+                              style={{
+                                backgroundColor: r.category?.color
+                                  ? `${r.category.color}22`
+                                  : '#eee',
+                                color: r.category?.color ?? '#444',
+                              }}
+                            >
+                              {r.category?.name ?? 'Umum'}
+                            </span>
+                            <span
+                              className={`px-sm py-xs rounded-full text-[10px] font-bold uppercase ${meta.bg} ${meta.color}`}
+                            >
+                              {meta.label}
+                            </span>
+                            <span className="text-[10px] text-outline">
+                              {formatRelative(r.createdAt)}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-on-surface line-clamp-1">
+                            {r.title}
+                          </h3>
+                          <p className="text-body-sm text-on-surface-variant line-clamp-1">
+                            {r.description}
+                          </p>
+                          {r.address && (
+                            <p className="text-[10px] text-outline mt-xs flex items-center gap-xs">
+                              <span className="material-symbols-outlined text-[14px]">
+                                location_on
+                              </span>
+                              {r.address}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-sm flex-wrap">
+                          <Link
+                            to={`/detail?id=${r.id}`}
+                            className="px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg font-button text-body-sm flex items-center gap-xs"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              visibility
+                            </span>
+                            Lihat
+                          </Link>
+                          <button
+                            type="button"
+                            disabled={actionId === r.id}
+                            onClick={() => handleStatus(r.id, 'verified')}
+                            className="px-md py-sm bg-primary text-on-primary rounded-lg font-button text-body-sm flex items-center gap-xs disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              check
+                            </span>
+                            Verifikasi
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionId === r.id}
+                            onClick={() => handleStatus(r.id, 'rejected')}
+                            className="px-md py-sm bg-error text-on-error rounded-lg font-button text-body-sm flex items-center gap-xs disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              close
+                            </span>
+                            Tolak
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </div>
       </main>
     </div>
   );
 };
-
-function StatCard({ label, value, color = '' }: { label: string; value?: number; color?: string }) {
-  return (
-    <div className="bg-surface-container-lowest p-lg rounded-xl border flex items-center justify-between">
-      <div>
-        <p className="font-label-bold text-outline uppercase">{label}</p>
-        <h2 className={`font-h1 mt-xs ${color}`}>{value ?? 0}</h2>
-      </div>
-      <span className="material-symbols-outlined text-primary text-[32px] opacity-30">folder_open</span>
-    </div>
-  );
-}
 
 export default AdminDashboard;

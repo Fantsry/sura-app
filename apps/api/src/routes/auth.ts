@@ -115,4 +115,53 @@ auth.get('/me', requireAuth, async (c) => {
   return c.json(serializeUser(user, true));
 });
 
+const updateProfileSchema = z.object({
+  fullName: z.string().min(2).max(255).optional(),
+  phoneNumber: z.string().max(20).optional(),
+  avatarUrl: z.string().url().optional().nullable(),
+});
+
+auth.patch('/me', requireAuth, zValidator('json', updateProfileSchema), async (c) => {
+  const jwtUser = c.get('user');
+  const body = c.req.valid('json');
+
+  const [updated] = await db
+    .update(users)
+    .set({
+      ...(body.fullName && { fullName: body.fullName }),
+      ...(body.phoneNumber !== undefined && { phoneNumber: body.phoneNumber }),
+      ...(body.avatarUrl !== undefined && { avatarUrl: body.avatarUrl }),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, jwtUser.sub))
+    .returning();
+
+  if (!updated) return c.json({ error: 'Pengguna tidak ditemukan' }, 404);
+  return c.json(serializeUser(updated, true));
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(6),
+});
+
+auth.post('/change-password', requireAuth, zValidator('json', changePasswordSchema), async (c) => {
+  const jwtUser = c.get('user');
+  const { currentPassword, newPassword } = c.req.valid('json');
+
+  const [user] = await db.select().from(users).where(eq(users.id, jwtUser.sub)).limit(1);
+  if (!user) return c.json({ error: 'Pengguna tidak ditemukan' }, 404);
+
+  const valid = await verifyPassword(currentPassword, user.passwordHash);
+  if (!valid) return c.json({ error: 'Kata sandi saat ini tidak cocok' }, 401);
+
+  const hashed = await hashPassword(newPassword);
+  await db
+    .update(users)
+    .set({ passwordHash: hashed, updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+
+  return c.json({ message: 'Kata sandi berhasil diubah' });
+});
+
 export default auth;
