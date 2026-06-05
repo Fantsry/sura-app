@@ -1,2 +1,6 @@
 # deps
 node_modules/
+
+# uploads (keep folder but ignore uploaded files)
+uploads/*
+!uploads/.gitkeep

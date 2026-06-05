@@ -84,6 +84,7 @@ const FormLaporan: React.FC = () => {
   const [address, setAddress] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageInput, setImageInput] = useState('');
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -132,6 +133,47 @@ const FormLaporan: React.FC = () => {
     setImageUrls((prev) => [...prev, url].slice(0, 5));
     setImageInput('');
     setError('');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const remainingSlots = 5 - imageUrls.length;
+    if (remainingSlots <= 0) {
+      setError('Maksimal 5 foto');
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    
+    setUploadingFiles(true);
+    setError('');
+
+    try {
+      for (const file of filesToUpload) {
+        // Validasi ukuran file (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          setError(`File ${file.name} terlalu besar. Maksimal 5MB`);
+          continue;
+        }
+
+        // Validasi tipe file
+        if (!file.type.startsWith('image/')) {
+          setError(`File ${file.name} bukan gambar`);
+          continue;
+        }
+
+        const result = await api.uploadImage(file);
+        setImageUrls((prev) => [...prev, result.url]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengupload foto');
+    } finally {
+      setUploadingFiles(false);
+      // Reset input
+      e.target.value = '';
+    }
   };
 
   const removeImage = (i: number) => {
@@ -404,8 +446,52 @@ const FormLaporan: React.FC = () => {
                 <div className="p-lg space-y-lg animate-fade-up">
                   <div>
                     <label className="font-label-bold text-on-surface-variant uppercase block mb-sm">
-                      Foto Pendukung (URL, max 5)
+                      Foto Pendukung (max 5)
                     </label>
+                    
+                    {/* Upload via File */}
+                    <div className="mb-md">
+                      <label
+                        className={`w-full px-md py-lg bg-primary-container text-primary border-2 border-dashed border-primary rounded-xl flex flex-col items-center justify-center gap-sm cursor-pointer hover:bg-primary-fixed transition-all ${
+                          uploadingFiles || imageUrls.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[48px]">
+                          {uploadingFiles ? 'hourglass_empty' : 'add_photo_alternate'}
+                        </span>
+                        <p className="font-button text-body-md">
+                          {uploadingFiles
+                            ? 'Mengupload...'
+                            : imageUrls.length >= 5
+                              ? 'Maksimal 5 foto tercapai'
+                              : 'Klik untuk pilih foto dari perangkat'}
+                        </p>
+                        <p className="text-body-sm text-on-surface-variant">
+                          JPG, PNG, WebP - Maks 5MB per file
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          multiple
+                          onChange={handleFileUpload}
+                          disabled={uploadingFiles || imageUrls.length >= 5}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Atau Upload via URL */}
+                    <div className="relative my-md">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-outline-variant"></div>
+                      </div>
+                      <div className="relative flex justify-center text-body-sm">
+                        <span className="px-md bg-surface-container-lowest text-on-surface-variant">
+                          atau tambah via URL
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="flex gap-sm">
                       <input
                         className="flex-1 px-md py-md bg-surface-container-low border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
@@ -423,7 +509,7 @@ const FormLaporan: React.FC = () => {
                         type="button"
                         onClick={addImage}
                         disabled={imageUrls.length >= 5}
-                        className="px-md py-md bg-primary text-on-primary rounded-xl font-button hover:brightness-110 disabled:opacity-50"
+                        className="px-md py-md bg-secondary text-on-secondary rounded-xl font-button hover:brightness-110 disabled:opacity-50"
                       >
                         Tambah
                       </button>
@@ -437,7 +523,7 @@ const FormLaporan: React.FC = () => {
                         {imageUrls.map((url, i) => (
                           <div
                             key={i}
-                            className="relative aspect-square rounded-xl overflow-hidden border border-outline-variant"
+                            className="relative aspect-square rounded-xl overflow-hidden border border-outline-variant group"
                           >
                             <img
                               src={url}
@@ -451,7 +537,7 @@ const FormLaporan: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => removeImage(i)}
-                              className="absolute top-1 right-1 bg-error text-on-error w-7 h-7 rounded-full flex items-center justify-center"
+                              className="absolute top-1 right-1 bg-error text-on-error w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                               aria-label="Hapus"
                             >
                               <span className="material-symbols-outlined text-[16px]">

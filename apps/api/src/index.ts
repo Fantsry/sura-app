@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { serveStatic } from 'hono/bun';
 import auth from './routes/auth';
 import categories from './routes/categories';
 import reports from './routes/reports';
@@ -9,6 +10,7 @@ import news from './routes/news';
 import forum from './routes/forum';
 import statistics from './routes/statistics';
 import notificationsRoute from './routes/notifications';
+import uploadRoute from './routes/upload';
 
 const app = new Hono();
 
@@ -29,6 +31,9 @@ app.get('/health', (c) =>
   c.json({ status: 'ok', service: 'sura-api', timestamp: new Date().toISOString() })
 );
 
+// Serve static files (uploaded images)
+app.use('/uploads/*', serveStatic({ root: './' }));
+
 const api = new Hono();
 api.route('/auth', auth);
 api.route('/categories', categories);
@@ -38,6 +43,7 @@ api.route('/news', news);
 api.route('/forum', forum);
 api.route('/statistics', statistics);
 api.route('/notifications', notificationsRoute);
+api.route('/upload', uploadRoute);
 
 app.route('/api', api);
 

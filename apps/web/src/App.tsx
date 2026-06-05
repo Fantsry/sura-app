@@ -4,6 +4,8 @@ import Beranda from './pages/Beranda'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminLaporan from './pages/AdminLaporan'
 import AdminPengguna from './pages/AdminPengguna'
+import AdminBerita from './pages/AdminBerita'
+import AdminKelolaBerita from './pages/AdminKelolaBerita'
 import Masuk from './pages/Login'
 import Laporanku from './pages/Laporanku'
 import DetailAduan from './pages/DetailAduan'
@@ -167,6 +169,22 @@ function App() {
             element={
               <AdminRoute>
                 <Pengaturan />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/berita"
+            element={
+              <AdminRoute>
+                <AdminBerita />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/kelola-berita"
+            element={
+              <AdminRoute>
+                <AdminKelolaBerita />
               </AdminRoute>
             }
           />

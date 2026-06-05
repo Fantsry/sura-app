@@ -134,4 +134,100 @@ news.post(
   }
 );
 
+// Admin: Get all news (including unpublished)
+news.get('/admin/all', requireAuth, requireAdmin, async (c) => {
+  const limit = Math.min(Number(c.req.query('limit') ?? 50), 100);
+
+  const rows = await db
+    .select({
+      article: newsArticles,
+      author: {
+        fullName: users.fullName,
+        avatarUrl: users.avatarUrl,
+      },
+    })
+    .from(newsArticles)
+    .leftJoin(users, eq(newsArticles.authorId, users.id))
+    .orderBy(desc(newsArticles.createdAt))
+    .limit(limit);
+
+  return c.json(
+    rows.map(({ article, author }) => ({
+      id: article.id,
+      title: article.title,
+      excerpt: article.excerpt,
+      content: article.content,
+      category: article.category,
+      imageUrl: article.imageUrl,
+      isPublished: article.isPublished,
+      isFeatured: article.isFeatured,
+      viewCount: article.viewCount,
+      tags: article.tags,
+      publishedAt: article.publishedAt,
+      createdAt: article.createdAt,
+      author: author?.fullName ?? 'Admin Sura',
+    }))
+  );
+});
+
+// Update news
+news.put(
+  '/:id',
+  requireAuth,
+  requireAdmin,
+  zValidator('json', createNewsSchema.partial()),
+  async (c) => {
+    const id = c.req.param('id');
+    const body = c.req.valid('json');
+
+    const [existing] = await db
+      .select()
+      .from(newsArticles)
+      .where(eq(newsArticles.id, id))
+      .limit(1);
+
+    if (!existing) {
+      return c.json({ error: 'Berita tidak ditemukan' }, 404);
+    }
+
+    const [updated] = await db
+      .update(newsArticles)
+      .set({
+        ...(body.title && { title: body.title }),
+        ...(body.content && { content: body.content }),
+        ...(body.excerpt !== undefined && { excerpt: body.excerpt }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl }),
+        ...(body.isPublished !== undefined && { isPublished: body.isPublished }),
+        ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
+        ...(body.tags && { tags: body.tags }),
+        updatedAt: new Date(),
+        ...(body.isPublished && !existing.publishedAt && { publishedAt: new Date() }),
+      })
+      .where(eq(newsArticles.id, id))
+      .returning();
+
+    return c.json(updated);
+  }
+);
+
+// Delete news
+news.delete('/:id', requireAuth, requireAdmin, async (c) => {
+  const id = c.req.param('id');
+
+  const [existing] = await db
+    .select()
+    .from(newsArticles)
+    .where(eq(newsArticles.id, id))
+    .limit(1);
+
+  if (!existing) {
+    return c.json({ error: 'Berita tidak ditemukan' }, 404);
+  }
+
+  await db.delete(newsArticles).where(eq(newsArticles.id, id));
+
+  return c.json({ message: 'Berita berhasil dihapus' });
+});
+
 export default news;

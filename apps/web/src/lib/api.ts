@@ -238,6 +238,34 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // Upload image file
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiRequest<{ url: string; fileName: string; size: number; type: string }>(
+      '/upload/image',
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+  },
+
+  // Upload multiple images
+  uploadImages: async (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    return apiRequest<{
+      files: Array<{ url: string; fileName: string; size: number; type: string }>;
+      count: number;
+    }>('/upload/images', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
   // News
   getNews: (params?: { limit?: number; featured?: boolean }) => {
     const q = new URLSearchParams();
@@ -246,6 +274,42 @@ export const api = {
     return apiRequest<NewsArticle[]>(`/news?${q}`);
   },
   getNewsById: (id: string) => apiRequest<NewsArticle>(`/news/${id}`),
+  createNews: (data: {
+    title: string;
+    content: string;
+    excerpt?: string;
+    category?: string;
+    imageUrl?: string;
+    isPublished?: boolean;
+    isFeatured?: boolean;
+    tags?: string[];
+  }) =>
+    apiRequest<NewsArticle>('/news', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  // Admin News Management
+  getAllNewsAdmin: (limit = 50) =>
+    apiRequest<NewsArticle[]>(`/news/admin/all?limit=${limit}`),
+  updateNews: (id: string, data: {
+    title?: string;
+    content?: string;
+    excerpt?: string;
+    category?: string;
+    imageUrl?: string;
+    isPublished?: boolean;
+    isFeatured?: boolean;
+    tags?: string[];
+  }) =>
+    apiRequest<NewsArticle>(`/news/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteNews: (id: string) =>
+    apiRequest<{ message: string }>(`/news/${id}`, {
+      method: 'DELETE',
+    }),
 
   // Forum
   getForumCategories: () =>

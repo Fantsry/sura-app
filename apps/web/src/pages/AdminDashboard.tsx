@@ -109,7 +109,21 @@ const AdminDashboard: React.FC = () => {
                 Pantau status laporan dan ambil tindakan dari satu tempat.
               </p>
             </div>
-            <div className="flex gap-sm">
+            <div className="flex flex-wrap gap-sm">
+              <Link
+                to="/admin/berita"
+                className="px-md py-sm bg-secondary text-on-secondary rounded-full font-button flex items-center gap-xs hover:brightness-110 transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                Buat Berita
+              </Link>
+              <Link
+                to="/admin/kelola-berita"
+                className="px-md py-sm bg-surface-container-low dark:bg-surface-container-high border border-outline-variant dark:border-outline rounded-full font-button flex items-center gap-xs hover:bg-surface-container dark:hover:bg-surface-container-highest"
+              >
+                <span className="material-symbols-outlined text-[18px]">newspaper</span>
+                Kelola Berita
+              </Link>
               <Link
                 to="/admin/laporan"
                 className="px-md py-sm bg-primary text-on-primary rounded-full font-button flex items-center gap-xs"
@@ -119,7 +133,7 @@ const AdminDashboard: React.FC = () => {
               </Link>
               <Link
                 to="/admin/pengguna"
-                className="px-md py-sm bg-surface-container-low border border-outline-variant rounded-full font-button flex items-center gap-xs"
+                className="px-md py-sm bg-surface-container-low dark:bg-surface-container-high border border-outline-variant dark:border-outline rounded-full font-button flex items-center gap-xs hover:bg-surface-container dark:hover:bg-surface-container-highest"
               >
                 <span className="material-symbols-outlined text-[18px]">people</span>
                 Pengguna
