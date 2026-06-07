@@ -27,12 +27,30 @@ export default function AdminDashboardScreen() {
   if (!isAdmin) return <Redirect href="/(tabs)/profil" />;
 
   const updateStatus = async (id: string, status: string) => {
-    try {
-      await api.admin.updateReportStatus(id, status);
-      await load();
-    } catch (e) {
-      Alert.alert('Gagal', e instanceof Error ? e.message : 'Error');
-    }
+    const actionMap: Record<string, string> = {
+      verified: 'Memverifikasi Laporan',
+      rejected: 'Menolak Laporan',
+      in_progress: 'Menindaklanjuti Laporan',
+      resolved: 'Menyelesaikan Laporan',
+    };
+    Alert.alert(
+      'Konfirmasi Tindakan',
+      `Apakah Anda yakin ingin: ${actionMap[status] ?? status}?`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        { 
+          text: 'Ya, Lanjutkan', 
+          onPress: async () => {
+            try {
+              await api.admin.updateReportStatus(id, status);
+              await load();
+            } catch (e) {
+              Alert.alert('Gagal', e instanceof Error ? e.message : 'Error');
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (

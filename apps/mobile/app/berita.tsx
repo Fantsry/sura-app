@@ -9,7 +9,10 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { SuraText } from '@/components/sura/SuraText';
+import { SuraButton } from '@/components/sura/SuraButton';
 import { api } from '@/src/lib/api';
+import { useAuth } from '@/src/context/AuthContext';
+import { router } from 'expo-router';
 
 type Article = {
   id: string;
@@ -28,6 +31,7 @@ const TRENDING = [
 ];
 
 export default function BeritaScreen() {
+  const { isAdmin } = useAuth();
   const [articles, setArticles] = useState<Article[]>([]);
 
   useEffect(() => {
@@ -55,6 +59,13 @@ export default function BeritaScreen() {
             <SuraText variant="bodySm" color={Colors.onSurfaceVariant}>
               Ringkasan info terbaru untuk warga
             </SuraText>
+            {isAdmin && (
+              <SuraButton 
+                title="+ Buat Berita Baru" 
+                onPress={() => router.push('/admin/berita' as any)}
+                style={{ marginTop: Spacing.md }}
+              />
+            )}
           </View>
 
           {featured ? (

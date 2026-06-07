@@ -110,6 +110,15 @@ const DetailAduan: React.FC = () => {
 
   const handleAdminAction = async (status: string) => {
     if (!id) return;
+    
+    let confirmMsg = '';
+    if (status === 'verified') confirmMsg = 'Apakah Anda yakin ingin memverifikasi laporan ini?';
+    if (status === 'in_progress') confirmMsg = 'Apakah Anda yakin ingin menindaklanjuti laporan ini?';
+    if (status === 'rejected') confirmMsg = 'Apakah Anda yakin ingin menolak laporan ini?';
+    if (status === 'resolved') confirmMsg = 'Apakah Anda yakin ingin menandai laporan ini sebagai selesai?';
+
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
+
     try {
       await api.admin.updateReportStatus(id, status);
       load();

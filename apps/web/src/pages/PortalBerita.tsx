@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Navigation from '../components/Navigation';
-import { api, formatDate, type NewsArticle } from '../lib/api';
+import { api, formatDate, getStoredUser, type NewsArticle } from '../lib/api';
 
 type CategoryStyle = {
   color: string;
@@ -30,6 +30,8 @@ const PortalBerita: React.FC = () => {
   const [open, setOpen] = useState<NewsArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const me = getStoredUser();
+  const isAdmin = me?.role === 'admin' || me?.role === 'moderator';
 
   useEffect(() => {
     api
@@ -106,9 +108,20 @@ const PortalBerita: React.FC = () => {
                 PORTAL BERITA
               </p>
               <h1 className="font-h1 text-h1 text-on-surface">Suara &amp; Update Sura</h1>
-              <p className="font-body-md text-on-surface-variant mt-xs">
-                Berita terkini, pengumuman resmi, dan tips keamanan dari moderator Sura.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-md mt-xs">
+                <p className="font-body-md text-on-surface-variant">
+                  Berita terkini, pengumuman resmi, dan tips keamanan dari moderator Sura.
+                </p>
+                {isAdmin && (
+                  <a
+                    href="/admin/berita"
+                    className="inline-flex items-center gap-xs px-md py-sm bg-primary text-on-primary rounded-full font-button hover:brightness-110 transition-all shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">add</span>
+                    Buat Berita Baru
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="relative">

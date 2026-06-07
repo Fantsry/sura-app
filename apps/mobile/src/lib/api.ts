@@ -168,6 +168,20 @@ export const api = {
       }>
     >('/news'),
 
+  createNews: (data: {
+    title: string;
+    content: string;
+    excerpt: string;
+    categoryId?: string;
+    tags?: string;
+    isFeatured?: boolean;
+    imageUrl?: string;
+  }) =>
+    apiRequest<{ id: string }>('/news', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   getForumPosts: () =>
     apiRequest<
       Array<{

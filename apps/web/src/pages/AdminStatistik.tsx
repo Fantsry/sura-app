@@ -2,6 +2,27 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import { api, getStoredUser } from '../lib/api';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 type AdminStats = {
   byStatus: Array<{ status: string; count: number }>;
@@ -72,15 +93,54 @@ const AdminStatistik: React.FC = () => {
     }));
   }, [stats]);
 
-  const maxMonth = useMemo(
-    () => months.reduce((m, r) => Math.max(m, r.count), 1),
-    [months]
-  );
-
   const totalCategoryCount = useMemo(
     () => (stats?.byCategory ?? []).reduce((sum, r) => sum + r.count, 0),
     [stats]
   );
+
+  const barData = {
+    labels: months.map((m) => m.label),
+    datasets: [
+      {
+        label: 'Laporan Masuk',
+        data: months.map((m) => m.count),
+        backgroundColor: '#00288e',
+        borderRadius: 4,
+      },
+    ],
+  };
+
+  const barOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#e0e0e0', tickBorderDash: [3, 3] } },
+    },
+  };
+
+  const pieData = {
+    labels: (stats?.byCategory || []).map((c) => c.category ?? 'Tanpa Kategori'),
+    datasets: [
+      {
+        data: (stats?.byCategory || []).map((c) => c.count),
+        backgroundColor: (stats?.byCategory || []).map((c) => c.color ?? '#666'),
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const pieOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '70%',
+    plugins: {
+      legend: { display: false },
+    },
+  };
 
   return (
     <div className="bg-surface text-on-surface min-h-screen">
@@ -164,45 +224,9 @@ const AdminStatistik: React.FC = () => {
                       <p className="mt-md">Belum ada data tren laporan.</p>
                     </div>
                   ) : (
-                    <>
-                      <div className="h-72 flex items-end justify-between gap-sm relative pt-xl">
-                        <div className="absolute inset-x-0 inset-y-xl flex flex-col justify-between">
-                          {[100, 75, 50, 25, 0].map((p) => (
-                            <div
-                              key={p}
-                              className="border-t border-dashed border-outline-variant w-full relative"
-                            >
-                              <span className="absolute -left-2 -top-2 text-[10px] text-outline">
-                                {Math.round((maxMonth * p) / 100)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        {months.map((m, i) => (
-                          <div
-                            key={i}
-                            className="flex-1 flex flex-col justify-end relative group"
-                          >
-                            <div
-                              className="bg-gradient-to-t from-primary to-primary-fixed-dim rounded-t-lg transition-all hover:from-primary hover:to-error-container"
-                              style={{
-                                height: `${Math.max((m.count / maxMonth) * 100, 4)}%`,
-                              }}
-                            />
-                            <span className="absolute -top-1 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-xs font-bold px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg z-10">
-                              {m.label}: {m.count}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-between mt-md text-label-bold text-outline text-[10px] uppercase">
-                        {months.map((m, i) => (
-                          <span key={i} className="flex-1 text-center">
-                            {m.label}
-                          </span>
-                        ))}
-                      </div>
-                    </>
+                    <div className="h-72 w-full pt-lg">
+                      <Bar data={barData} options={barOptions} />
+                    </div>
                   )}
                 </section>
 
@@ -215,39 +239,44 @@ const AdminStatistik: React.FC = () => {
                       Belum ada data kategori.
                     </p>
                   ) : (
-                    <div className="space-y-md">
-                      {stats.byCategory.map((c, i) => {
-                        const pct =
-                          totalCategoryCount > 0
-                            ? Math.round((c.count / totalCategoryCount) * 1000) / 10
-                            : 0;
-                        return (
-                          <div className="space-y-xs" key={`${c.category}-${i}`}>
-                            <div className="flex justify-between items-center">
-                              <span className="flex items-center gap-sm text-body-sm line-clamp-1">
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                  style={{ backgroundColor: c.color ?? '#999' }}
+                    <>
+                      <div className="h-48 w-full mb-md relative">
+                        <Doughnut data={pieData} options={pieOptions} />
+                      </div>
+                      <div className="space-y-md">
+                        {stats.byCategory.map((c, i) => {
+                          const pct =
+                            totalCategoryCount > 0
+                              ? Math.round((c.count / totalCategoryCount) * 1000) / 10
+                              : 0;
+                          return (
+                            <div className="space-y-xs" key={`${c.category}-${i}`}>
+                              <div className="flex justify-between items-center">
+                                <span className="flex items-center gap-sm text-body-sm line-clamp-1">
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: c.color ?? '#999' }}
+                                  />
+                                  {c.category ?? 'Tanpa Kategori'}
+                                </span>
+                                <span className="font-bold text-body-sm">
+                                  {c.count} <span className="text-outline text-xs">({pct}%)</span>
+                                </span>
+                              </div>
+                              <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${pct}%`,
+                                    backgroundColor: c.color ?? '#666',
+                                  }}
                                 />
-                                {c.category ?? 'Tanpa Kategori'}
-                              </span>
-                              <span className="font-bold text-body-sm">
-                                {c.count} <span className="text-outline text-xs">({pct}%)</span>
-                              </span>
+                              </div>
                             </div>
-                            <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                  width: `${pct}%`,
-                                  backgroundColor: c.color ?? '#666',
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </section>
               </div>
