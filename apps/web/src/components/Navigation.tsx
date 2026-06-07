@@ -34,9 +34,20 @@ const Navigation: React.FC = () => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const notifRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
+    if (q !== null) {
+      setSearchQuery(q);
+    } else {
+      setSearchQuery('');
+    }
+  }, [location.search]);
 
   const loadNotifications = useCallback(() => {
     if (!getStoredUser()) return;
@@ -92,6 +103,18 @@ const Navigation: React.FC = () => {
       return location.pathname === '/';
     }
     return location.pathname === href || location.pathname.startsWith(`${href}/`);
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const q = searchQuery.trim();
+      if (!q) return;
+      if (user?.role === 'admin') {
+        navigate(`/admin/laporan?q=${encodeURIComponent(q)}`);
+      } else {
+        navigate(`/komunitas?q=${encodeURIComponent(q)}`);
+      }
+    }
   };
 
   const handleLogout = () => {
@@ -169,7 +192,10 @@ const Navigation: React.FC = () => {
             <input 
               className="w-full pl-10 pr-4 py-2 bg-surface-container dark:bg-surface-container-highest rounded-full border-none focus:ring-2 focus:ring-primary dark:focus:ring-primary outline-none font-body-md text-on-surface dark:text-on-surface placeholder:text-on-surface-variant dark:placeholder:text-on-surface-variant" 
               placeholder={user.role === 'admin' ? 'Cari laporan atau pengguna...' : 'Search community topics...'} 
-              type="text" 
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
             />
           </div>
         </div>

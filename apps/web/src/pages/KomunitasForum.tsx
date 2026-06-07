@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import {
   api,
@@ -18,9 +18,17 @@ const KomunitasForum: React.FC = () => {
   >([]);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>('hot');
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('q') || '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q !== null) {
+      setSearch(q);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     Promise.all([
