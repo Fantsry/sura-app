@@ -20,7 +20,10 @@ app.use('*', logger());
 app.use(
   '*',
   cors({
-    origin: corsOrigin.split(',').map((o) => o.trim()),
+    origin: (origin) => {
+      if (!origin) return 'http://localhost:5173';
+      return origin;
+    },
     allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
