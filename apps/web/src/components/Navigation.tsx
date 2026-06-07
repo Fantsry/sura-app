@@ -179,11 +179,11 @@ const Navigation: React.FC = () => {
             <button
               type="button"
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative material-symbols-outlined p-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors rounded-full"
+              className="relative p-2 text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-high transition-colors rounded-full flex items-center justify-center"
             >
-              notifications
+              <span className="material-symbols-outlined">notifications</span>
               {unreadCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] bg-error text-on-error rounded-full text-[10px] font-bold flex items-center justify-center px-xs">
+                <span className="absolute top-0 right-0 min-w-[18px] h-[18px] bg-error text-on-error rounded-full text-[10px] font-bold font-sans flex items-center justify-center px-1 whitespace-nowrap leading-none">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -298,11 +298,11 @@ const Navigation: React.FC = () => {
             <button
               type="button"
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative material-symbols-outlined p-2 text-on-surface-variant dark:text-on-surface-variant"
+              className="relative p-2 text-on-surface-variant dark:text-on-surface-variant flex items-center justify-center rounded-full"
             >
-              notifications
+              <span className="material-symbols-outlined">notifications</span>
               {unreadCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] bg-error text-on-error rounded-full text-[10px] font-bold flex items-center justify-center px-xs">
+                <span className="absolute top-0 right-0 min-w-[18px] h-[18px] bg-error text-on-error rounded-full text-[10px] font-bold font-sans flex items-center justify-center px-1 whitespace-nowrap leading-none">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}

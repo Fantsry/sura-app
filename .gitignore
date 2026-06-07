@@ -68,3 +68,4 @@ uploads/
 
 # Docker
 .dockerignore
+test.js
